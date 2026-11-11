@@ -10,8 +10,7 @@ dev = [
 plots = ["matplotlib>=3.10.7", "pandas>=2.3.3"]
 
 [tool.uv.workspace]
-members = ["packages/magentic-marketplace"]
-
+members = ["packages/ekklesia-market"]
 
 [tool.ruff]
 line-length = 88
@@ -54,20 +53,20 @@ lint = "ruff check"
 lint-fix = "ruff check --fix --unsafe-fixes"
 
 # Type checking tasks
-type = "pyright packages"
+type = "pyright packages/ekklesia-market"
 type-fix = """
-pyright src --outputjson > /tmp/pyright_output.json 2>/dev/null || true
+pyright packages/ekklesia-market/src --outputjson > /tmp/pyright_output.json 2>/dev/null || true
 echo 'Type checking completed.'
 """
 
-spell = "codespell packages docs --skip='*/node_modules/*,*/.git/*,*/__pycache__/*,*/.venv/*,*/static/assets/*,*.json,*/.vitepress/*' --ignore-words-list='mappin'"
+spell = "codespell packages contracts --skip='*/.git/*,*/__pycache__/*,*/.venv/*,*/static/assets/*,*.json' --ignore-words-list='mappin'"
 
 # Combined quality checks
 check-all = ["format", "lint", "type", "spell"]
 fix-all = ["format-fix", "lint-fix"]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/magentic-marketplace/tests"]
+testpaths = ["packages/ekklesia-market/tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
@@ -79,4 +78,3 @@ markers = [
     "rnr: tests that require the rnr extra dependencies",
     "postgres: tests that require postgres",
 ]
-env_files = ["dev.env"]

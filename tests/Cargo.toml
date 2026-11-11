@@ -1,0 +1,15 @@
+[package]
+name = "ekklesia-market-tests"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+[dependencies]
+near-workspaces = { version = "0.24.0", features = ["unstable"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+near-sdk = { version = "5.30.1", features = ["unit-testing"] }
+
+[[test]]
+name = "sandbox_market"
+path = "sandbox_market.rs"

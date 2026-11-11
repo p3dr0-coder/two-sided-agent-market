@@ -227,3 +227,9 @@ __marimo__/
 *.json
 
 !.vscode/settings.json
+
+# ekklesia local state
+.sandbox/
+*.wasm
+data/*-tx.jsonl
+analytics_results_*.json

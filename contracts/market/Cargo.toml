@@ -1,0 +1,20 @@
+[package]
+name = "ekklesia-market"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+description = "Native-NEAR settlement and EVENT_JSON welfare counters for the ekklesia agent market"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5.30.1"
+near-contract-standards = { version = "5.30.1", optional = true }
+
+[features]
+default = []
+ft-leg = ["near-contract-standards"]
+
