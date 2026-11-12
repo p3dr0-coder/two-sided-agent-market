@@ -4,21 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-export PYTHONPATH="$ROOT/packages/ekklesia-market/src${PYTHONPATH:+:$PYTHONPATH}"
-
-PYTHON="${PYTHON:-}"
-if [[ -z "$PYTHON" ]]; then
-  for candidate in python3 python python.exe; do
-    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import sys" >/dev/null 2>&1; then
-      PYTHON="$candidate"
-      break
-    fi
-  done
-fi
-if [[ -z "$PYTHON" ]]; then
-  echo "setup_local.sh requires Python 3" >&2
-  exit 1
-fi
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
 
 CONTAINER="${NEAR_SANDBOX_CONTAINER:-ekklesia-sandbox}"
 IMAGE="${NEAR_SANDBOX_IMAGE:-nearprotocol/sandbox:2.13.4}"

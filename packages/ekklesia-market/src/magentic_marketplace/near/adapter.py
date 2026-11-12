@@ -8,8 +8,6 @@ the customer sub-account.
 
 from __future__ import annotations
 
-from typing import Any
-
 from magentic_marketplace.marketplace.actions import (
     ActionAdapter,
     OrderProposal,
@@ -81,11 +79,3 @@ class NearSettlementProtocol(SimpleMarketplaceProtocol):
         return result
 
 
-def route_targets(send_message: SendMessage) -> tuple[str, str] | None:
-    """Return ``(kind, proposal_id)`` for unit tests without touching a client."""
-    message: Any = send_message.message
-    if isinstance(message, OrderProposal):
-        return ("order_proposal", message.id)
-    if isinstance(message, Payment):
-        return ("payment", message.proposal_message_id)
-    return None

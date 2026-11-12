@@ -6,7 +6,7 @@ import asyncio
 import logging
 from decimal import Decimal
 
-from ...near.client import NearClient, to_cents
+from ...near.client import NearClient
 from ..actions import OrderItem, OrderProposal, Payment, ReceivedMessage, TextMessage
 from ..shared.models import Business, BusinessAgentProfile, CustomerAgentProfile
 from .base import BaseSimpleMarketplaceAgent
@@ -101,7 +101,3 @@ class DeterministicBusinessAgent(BaseSimpleMarketplaceAgent[BusinessAgentProfile
         else:
             await asyncio.sleep(self._polling_interval)
 
-
-def exact_menu_total_cents(business: Business, item_names: list[str]) -> int:
-    """Exact cent total for one of each requested item."""
-    return sum(to_cents(business.menu_features[name]) for name in item_names)

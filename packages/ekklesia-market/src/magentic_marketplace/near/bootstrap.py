@@ -70,7 +70,7 @@ def _load_documents(data_dir: Path, kind: str) -> list[dict[str, Any]]:
     return [yaml.safe_load(path.read_text(encoding="utf-8")) for path in files]
 
 
-def _business_profile(business: MappingLike, payout_account: str) -> dict[str, Any]:
+def _business_profile(business: dict[str, Any], payout_account: str) -> dict[str, Any]:
     return {
         "role": "Business",
         "menu": [
@@ -87,7 +87,7 @@ def _business_profile(business: MappingLike, payout_account: str) -> dict[str, A
     }
 
 
-def _customer_profile(customer: MappingLike, account_id: str) -> dict[str, Any]:
+def _customer_profile(customer: dict[str, Any], account_id: str) -> dict[str, Any]:
     menu = [
         [str(name), str(to_cents(price))]
         for name, price in customer["menu_features"].items()
@@ -100,9 +100,6 @@ def _customer_profile(customer: MappingLike, account_id: str) -> dict[str, Any]:
         "requested_total_cents": str(requested_total),
         "payout_account": account_id,
     }
-
-
-MappingLike = dict[str, Any]
 
 
 def _locate_wasm(explicit: str | None) -> Path:

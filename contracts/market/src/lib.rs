@@ -12,10 +12,9 @@ mod settlement;
 mod types;
 mod welfare;
 
-pub use crate::events::*;
-pub use crate::types::*;
-
-use crate::types::StorageKey;
+use crate::types::{
+    AgentProfile, Proposal, StorageKey, TradeReceipt, WelfareCounters,
+};
 use near_sdk::json_types::U128;
 use near_sdk::store::{LookupMap, LookupSet, Vector};
 use near_sdk::{AccountId, PanicOnDefault, env, near, require};

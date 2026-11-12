@@ -49,10 +49,6 @@ class NearAnalyticsFeed:
     def rejected(self) -> list[dict[str, Any]]:
         return self._payloads("proposal_rejected")
 
-    @property
-    def snapshots(self) -> list[dict[str, Any]]:
-        return self._payloads("welfare_snapshot")
-
     def settle_gas_tgas(self) -> list[float]:
         """Gas burnt by each logged ``settle`` transaction, in TGas."""
         return [

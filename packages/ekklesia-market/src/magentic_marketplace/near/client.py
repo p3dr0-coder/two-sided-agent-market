@@ -67,9 +67,6 @@ def expiry_ns(value: Any, block_timestamp_ns: int) -> int:
     """
     if value is None or value == "":
         return block_timestamp_ns + PROPOSAL_TTL_NS
-    if isinstance(value, (int, float)):
-        number = float(value)
-        return int(number * 1_000_000_000) if number < 10_000_000_000 else int(number)
     parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=UTC)
@@ -160,8 +157,6 @@ class NearClient:
         if account_id == self.root_account_id:
             return self._client
         agents = self._agents_by_sim_id()
-        if account_id in agents:
-            return self._client.with_signer(self.signer_for(account_id))
         for sim_id, entry in agents.items():
             if str(entry["account_id"]) == account_id:
                 return self._client.with_signer(self.signer_for(sim_id))
@@ -176,7 +171,7 @@ class NearClient:
                 )
             document = json.loads(self.agents_file.read_text(encoding="utf-8"))
             merged: dict[str, dict[str, Any]] = {}
-            for group in ("businesses", "customers", "agents"):
+            for group in ("businesses", "customers"):
                 entries = document.get(group, {})
                 if isinstance(entries, dict):
                     merged.update(entries)
