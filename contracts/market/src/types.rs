@@ -177,7 +177,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn peg_is_exactly_one_e19_yocto_per_cent() {
+    fn peg_is_exactly_one_e19_yocto_per_usd_cent() {
         assert_eq!(CENTS_PER_NEAR, 100_000);
         assert_eq!(YOCTO_PER_USD_CENT, 10_000_000_000_000_000_000);
         assert_eq!(YOCTO_PER_USD_CENT * CENTS_PER_NEAR, YOCTO_PER_NEAR);

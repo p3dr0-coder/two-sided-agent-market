@@ -47,7 +47,7 @@ async def run_probe(experiment_name: str | None = None) -> None:
             raise RuntimeError(f"expected Funded, got {funded}")
 
         await client.fast_forward(40)
-        await client.refund(proposal_id)
+        await client.refund(proposal_id, client.account_for(customer))
         refunded = await client.get_proposal(proposal_id)
         if refunded is None or refunded["status"] != "Refunded":
             raise RuntimeError(f"expected Refunded, got {refunded}")

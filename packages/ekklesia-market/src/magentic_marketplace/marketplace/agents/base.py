@@ -45,7 +45,7 @@ class BaseSimpleMarketplaceAgent(BaseAgent[TProfile]):
         """Initialize the simple marketplace agent."""
         super().__init__(profile, base_url)
         self.last_fetch_index: int | None = None
-        self.llm_config = llm_config or BaseLLMConfig()
+        self.llm_config = llm_config
         self._seen_message_indexes: set[int] = set()
 
     async def send_message(self, to_agent_id: str, message: Message):
@@ -127,7 +127,8 @@ class BaseSimpleMarketplaceAgent(BaseAgent[TProfile]):
             Tuple of (response_text, call_metadata)
 
         """
-        # Use llm_config if provided, otherwise use kwargs directly
+        if self.llm_config is None:
+            raise RuntimeError("LLM config is required for generate()")
         kwargs = {**self.llm_config.model_dump(), **kwargs}
         response, usage = await generate(
             prompt, logger=self.logger, log_metadata={"agent_id": self.id}, **kwargs
@@ -157,7 +158,8 @@ class BaseSimpleMarketplaceAgent(BaseAgent[TProfile]):
             Tuple of (structured_response, call_metadata)
 
         """
-        # Use llm_config if provided, otherwise use kwargs directly
+        if self.llm_config is None:
+            raise RuntimeError("LLM config is required for generate_struct()")
         kwargs = {
             **self.llm_config.model_dump(),
             **kwargs,

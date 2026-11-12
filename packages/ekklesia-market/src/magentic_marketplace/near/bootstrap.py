@@ -42,11 +42,15 @@ from .client import (
 )
 
 ROOT = Path(__file__).resolve().parents[5]
-GAS_FUND_YOCTO = 200_000_000_000_000_000_000_000  # 0.2 NEAR
+GAS_FUND_YOCTO = 500_000_000_000_000_000_000_000  # 0.5 NEAR
 CONTRACT_FUNDING_YOCTO = 10_000_000_000_000_000_000_000_000  # 10 NEAR
 
 
 def _root_signer(network: str) -> KeyPairSigner:
+    account_id = os.environ.get("NEAR_ROOT_ACCOUNT")
+    private_key = os.environ.get("NEAR_ROOT_PRIVATE_KEY")
+    if account_id and private_key:
+        return KeyPairSigner(account_id, parse_key(private_key))
     if network == "sandbox":
         return sandbox_signer()
     account_id = os.environ.get("NEAR_ACCOUNT_ID")

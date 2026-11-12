@@ -38,6 +38,13 @@ bash scripts/demo.sh
 6. analyzes the simulation and prints the on-chain headline;
 7. posts, escrows, expires, and refunds one proposal to prove the refund path.
 
+
+No Docker? Start a native nearcore sandbox (`near-sandbox --home DIR init`,
+then `near-sandbox --home DIR run`), export `NEAR_SANDBOX_URL`,
+`NEAR_ROOT_ACCOUNT`, `NEAR_ROOT_PRIVATE_KEY`, and a matching
+`MARKET_CONTRACT_ID` (e.g. `ekklesia.test.near`), then run the same scripts;
+`setup_local.sh` uses the native node instead of starting a container.
+
 No LLM keys and no real funds are used. The demo peg is `1 NEAR = $1000`
 (`CENTS_PER_NEAR = 100_000`), so `1` USD cent escrows exactly `1e19` yoctoNEAR.
 
@@ -59,18 +66,22 @@ Postgres schema). Postgres is opt-in: `docker compose up -d postgres` and
 `--db-type postgres`. SQLite is the default because the scripted demo is
 sequential.
 
-`scripts/measure.sh` prints the doc's one-line claim:
+`scripts/measure.sh` prints one measured headline. Sandbox run 2026-11-12
+(`nearprotocol/sandbox`-equivalent native nearcore 2.14, 5 businesses × 20
+customers, `fee_bps = 0`):
 
 ```
-Total marketplace customer utility = W; purchase completion rate = R% (R = bps/100); needs-met = N/20; invalid proposals accepted = 0 of K attempts (J soft-rejected); gas/settle = G TGas
+Total marketplace customer utility = 1542308; purchase completion rate = 100% (R = 10000/100); needs-met = 20/20; invalid proposals accepted = 0 of 23 attempts (3 soft-rejected); gas/settle = 3.617 TGas
 ```
 
-The value is **measured, not predicted**. This repository does not contain a
-measured value and this scaffolding commit makes no claim that a run occurred;
-the coordinator records the output of the remote run in `WORKLOG.md` (and the
-saved `analytics_results_numbers.json`). Bounds: 20 customers × 5 businesses is
-a port-only scale; the paper's §4.1 markets are 33/99 and 100/300, so W and N
-are not paper-comparable.
+`W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`, `K = 23`,
+`J = 3`, `G = 3.617 TGas` (median). The same W/R/N/G values were produced by
+two independent fresh sandbox runs (`demo.sh`: 20 attempts, 0 rejected;
+`measure.sh`: 23 attempts, 3 rejected). The transcript is
+`remote-w4/w4-demo.log` and `remote-w4/w4-numbers.log` in the coordinator
+workspace. Bounds: 20 customers × 5 businesses is a port-only scale; the
+paper's §4.1 markets are 33/99 and 100/300, so W and N are not
+paper-comparable.
 
 ## Architecture map
 

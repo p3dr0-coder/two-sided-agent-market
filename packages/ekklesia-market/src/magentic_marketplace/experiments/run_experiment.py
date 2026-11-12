@@ -162,7 +162,7 @@ async def run_marketplace_experiment(
                         customer,
                         marketplace_launcher.server_url,
                         search_bandwidth=max(search_bandwidth, 50),
-                        max_steps=min(customer_max_steps or 12, 12),
+                        max_steps=min(customer_max_steps or 60, 60),
                     )
                     for customer in customers
                 ]
