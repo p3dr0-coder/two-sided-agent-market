@@ -111,8 +111,36 @@ async fn market_soft_rejects_invalid_and_settles_valid() -> Result<()> {
         .await?
         .into_result()?;
 
+    business
+        .call(contract.id(), "post_proposal")
+        .args_json(json!({
+            "proposal_id": "invalid-price",
+            "customer": customer_id.to_string(),
+            "items": [{"item_name": "Door Lock Replacement", "quantity": 1, "unit_price": "15446"}],
+            "total_price": "15446",
+            "expiry": MAX_EXPIRY
+        }))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+
+    business
+        .call(contract.id(), "post_proposal")
+        .args_json(json!({
+            "proposal_id": "invalid-total",
+            "customer": customer_id.to_string(),
+            "items": [{"item_name": "Door Lock Replacement", "quantity": 1, "unit_price": "15445"}],
+            "total_price": "15446",
+            "expiry": MAX_EXPIRY
+        }))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+
     let welfare: Value = contract.view("get_welfare").await?.json()?;
-    assert_eq!(welfare["rejected_proposals"], 1);
+    assert_eq!(welfare["rejected_proposals"], 3);
     let rejected: Value = contract
         .view("get_proposal")
         .args_json(json!({"proposal_id": "invalid-1"}))
@@ -191,6 +219,63 @@ async fn market_soft_rejects_invalid_and_settles_valid() -> Result<()> {
     assert_eq!(welfare["total_customer_utility_cents"], "18353");
     assert_eq!(welfare["total_business_revenue_cents"], "15445");
     assert_eq!(welfare["avg_utility_per_purchaser_cents"], "18353");
+
+    let second_settle = business
+        .call(contract.id(), "settle")
+        .args_json(json!({"proposal_id": "p1"}))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?;
+    assert!(second_settle.into_result().is_err(), "double settle must fail");
+
+    let expiry = (worker.view_block().await?.timestamp() + 2_000_000_000).to_string();
+    business
+        .call(contract.id(), "post_proposal")
+        .args_json(json!({
+            "proposal_id": "p2",
+            "customer": customer_id.to_string(),
+            "items": [{"item_name": "Door Lock Replacement", "quantity": 1, "unit_price": "15445"}],
+            "total_price": "15445",
+            "expiry": expiry
+        }))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+    customer
+        .call(contract.id(), "accept_proposal")
+        .args_json(json!({"proposal_id": "p2"}))
+        .deposit(NearToken::from_yoctonear(15_445 * YOCTO_PER_USD_CENT))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+
+    worker.fast_forward(10).await?;
+    let stranger = worker.dev_create_account().await?;
+    stranger
+        .call(contract.id(), "refund")
+        .args_json(json!({"proposal_id": "p2"}))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+    let refunded: Value = contract
+        .view("get_proposal")
+        .args_json(json!({"proposal_id": "p2"}))
+        .await?
+        .json()?;
+    assert_eq!(refunded["status"], "Refunded");
+    let second_refund = stranger
+        .call(contract.id(), "refund")
+        .args_json(json!({"proposal_id": "p2"}))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?;
+    assert!(second_refund.into_result().is_err(), "double refund must fail");
+    let welfare_after: Value = contract.view("get_welfare").await?.json()?;
+    assert_eq!(welfare_after["settled_count"], 1);
+    assert_eq!(welfare_after["total_customer_utility_cents"], "18353");
 
     Ok(())
 }
