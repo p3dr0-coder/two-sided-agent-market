@@ -12,7 +12,7 @@ const MAX_EXPIRY: &str = "18446744073709551615";
 #[tokio::test]
 async fn market_soft_rejects_invalid_and_settles_valid() -> Result<()> {
     let worker = sandbox().await?;
-    let wasm = compile_project(concat!(env!("CARGO_MANIFEST_DIR"), "/..")).await?;
+    let wasm = compile_project(concat!(env!("CARGO_MANIFEST_DIR"), "/../contracts/market")).await?;
     let contract = worker.dev_deploy(&wasm).await?;
     contract
         .call("new")

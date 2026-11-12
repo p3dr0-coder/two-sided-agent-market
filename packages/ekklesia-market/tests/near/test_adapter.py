@@ -37,10 +37,10 @@ class FakeNear:
         self.calls.append(("accept_proposal", kwargs))
 
 
-def send_message(message) -> SendMessage:
+def send_message(message, *, from_agent_id="business_0001", to_agent_id="customer_0001") -> SendMessage:
     return SendMessage(
-        from_agent_id="business_0001",
-        to_agent_id="customer_0001",
+        from_agent_id=from_agent_id,
+        to_agent_id=to_agent_id,
         created_at=datetime.now(UTC),
         message=message,
     )
@@ -81,7 +81,12 @@ async def test_order_proposal_and_payment_route_then_delegate():
         await protocol.execute_action(
             agent=AgentProfile(id="customer_0001"),
             action=ActionExecutionRequest(
-                name="SendMessage", parameters=send_message(payment).model_dump(mode="json")
+                name="SendMessage",
+                parameters=send_message(
+                    payment,
+                    from_agent_id="customer_0001",
+                    to_agent_id="business_0001",
+                ).model_dump(mode="json"),
             ),
             database=object(),
         )

@@ -215,4 +215,23 @@ mod tests {
         assert_eq!(escrow_yocto(0), Some(0));
         assert_eq!(escrow_yocto(u128::MAX), None);
     }
+
+    #[test]
+    fn caps_match_the_doc() {
+        assert_eq!(MAX_MENU, 50);
+        assert_eq!(MAX_AMENITIES, 20);
+        assert_eq!(MAX_ITEMS_PER_PROPOSAL, 10);
+        assert_eq!(MAX_PROPOSALS_PER_CUSTOMER, 20);
+        assert_eq!(PROPOSAL_TTL_NS, 300_000_000_000);
+    }
+
+    #[test]
+    fn order_total_reports_overflow_instead_of_wrapping() {
+        let items = vec![OrderItem {
+            item_name: "overflow".to_string(),
+            quantity: u64::MAX,
+            unit_price: U128(u128::MAX),
+        }];
+        assert_eq!(order_total(&items), None);
+    }
 }

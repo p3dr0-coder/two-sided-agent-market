@@ -333,11 +333,15 @@ impl Contract {
         .emit();
         MarketEvent::WelfareSnapshot(vec![self.summary()]).emit();
 
+        let revenue_yocto = escrow_yocto(revenue)
+            .unwrap_or_else(|| env::panic_str("settlement revenue overflow"));
+        let fee_yocto = escrow_yocto(fee)
+            .unwrap_or_else(|| env::panic_str("settlement fee overflow"));
         let mut promise = Promise::new(business_profile.payout_account.clone())
-            .transfer(NearToken::from_yoctonear(revenue));
+            .transfer(NearToken::from_yoctonear(revenue_yocto));
         if fee > 0 {
             promise = promise.and(
-                Promise::new(self.owner.clone()).transfer(NearToken::from_yoctonear(fee)),
+                Promise::new(self.owner.clone()).transfer(NearToken::from_yoctonear(fee_yocto)),
             );
         }
         promise

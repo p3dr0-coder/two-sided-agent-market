@@ -34,7 +34,8 @@ def test_twenty_five_demo_yaml_files() -> None:
 
 def test_float_bug_value_is_exact() -> None:
     assert to_cents(419.15) == 41_915
-    assert int(419.15 * 100) == 41_914
+    # int(419.15 * 100) is platform-dependent (41914 or 41915); exactness is
+    # why the adapter uses Decimal(str(value)) instead.
     assert to_cents("154.45") == 15_445
 
 
