@@ -57,8 +57,10 @@ else
     echo "contract WASM not found after cargo build" >&2
     exit 1
   fi
-  export MARKET_WASM
 fi
+
+MARKET_WASM="$("$ROOT/scripts/wasm_opt.sh" "$MARKET_WASM")"
+export MARKET_WASM
 
 "$PYTHON" -m magentic_marketplace.near.bootstrap \
   --network sandbox \

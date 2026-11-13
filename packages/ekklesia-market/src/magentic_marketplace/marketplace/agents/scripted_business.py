@@ -23,7 +23,7 @@ class DeterministicBusinessAgent(BaseSimpleMarketplaceAgent[BusinessAgentProfile
         base_url: str,
         near_client: NearClient,
         *,
-        polling_interval: float = 0.2,
+        polling_interval: float = 0.5,
     ):
         """Build a business profile and bind the settlement client."""
         super().__init__(BusinessAgentProfile.from_business(business), base_url)

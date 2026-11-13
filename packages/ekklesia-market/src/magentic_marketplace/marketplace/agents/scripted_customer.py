@@ -89,7 +89,7 @@ class DeterministicCustomerAgent(BaseSimpleMarketplaceAgent[CustomerAgentProfile
         *,
         search_bandwidth: int = SEARCH_BANDWIDTH,
         max_steps: int = MAX_STEPS,
-        polling_interval: float = 0.2,
+        polling_interval: float = 0.5,
     ):
         """Build a customer profile and configure the deterministic policy."""
         super().__init__(CustomerAgentProfile.from_customer(customer), base_url)

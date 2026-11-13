@@ -45,6 +45,9 @@ ROOT = Path(__file__).resolve().parents[5]
 GAS_FUND_YOCTO = 500_000_000_000_000_000_000_000  # 0.5 NEAR
 CONTRACT_FUNDING_YOCTO = 10_000_000_000_000_000_000_000_000  # 10 NEAR
 
+REGISTRATION_CONCURRENCY = 8
+FUNDING_CONCURRENCY = 8
+
 
 def _root_signer(network: str) -> KeyPairSigner:
     account_id = os.environ.get("NEAR_ROOT_ACCOUNT")
@@ -203,7 +206,19 @@ async def bootstrap(args: argparse.Namespace) -> None:
             "customers": {},
         }
 
-        for index, business in enumerate(businesses, start=1):
+        async def bounded(coros: list[Any], limit: int) -> list[Any]:
+            """Run coroutines with a fixed maximum in flight, preserving order."""
+            semaphore = asyncio.Semaphore(limit)
+
+            async def run(coro: Any) -> Any:
+                async with semaphore:
+                    return await coro
+
+            return await asyncio.gather(*(run(coro) for coro in coros))
+
+        async def register_business(
+            index: int, business: dict[str, Any]
+        ) -> tuple[str, dict[str, Any]]:
             agent_name = f"b{index}"
             key = generate_key()
             profile = _business_profile(business, payout_account)
@@ -213,8 +228,9 @@ async def bootstrap(args: argparse.Namespace) -> None:
                 str(key.public_key),
                 deposit_yocto=BUSINESS_REGISTRATION_DEPOSIT_YOCTO,
             )
-            document["businesses"][str(business["id"])] = {
-                "sim_id": str(business["id"]),
+            sim_id = str(business["id"])
+            return sim_id, {
+                "sim_id": sim_id,
                 "account_id": account_id,
                 "secret_key": str(key.secret_key),
                 "public_key": str(key.public_key),
@@ -222,7 +238,9 @@ async def bootstrap(args: argparse.Namespace) -> None:
                 "profile": profile,
             }
 
-        for index, customer in enumerate(customers, start=1):
+        async def register_customer(
+            index: int, customer: dict[str, Any]
+        ) -> tuple[str, dict[str, Any]]:
             agent_name = f"c{index}"
             key = generate_key()
             account_id = client.account_for_name(agent_name)
@@ -233,8 +251,9 @@ async def bootstrap(args: argparse.Namespace) -> None:
                 str(key.public_key),
                 deposit_yocto=AGENT_REGISTRATION_DEPOSIT_YOCTO,
             )
-            document["customers"][str(customer["id"])] = {
-                "sim_id": str(customer["id"]),
+            sim_id = str(customer["id"])
+            return sim_id, {
+                "sim_id": sim_id,
                 "account_id": account_id,
                 "secret_key": str(key.secret_key),
                 "public_key": str(key.public_key),
@@ -242,19 +261,41 @@ async def bootstrap(args: argparse.Namespace) -> None:
                 "profile": profile,
             }
 
-        for entry in document["businesses"].values():
-            await root.send(
+        business_entries = await bounded(
+            [
+                register_business(index, business)
+                for index, business in enumerate(businesses, start=1)
+            ],
+            REGISTRATION_CONCURRENCY,
+        )
+        document["businesses"].update(business_entries)
+
+        customer_entries = await bounded(
+            [
+                register_customer(index, customer)
+                for index, customer in enumerate(customers, start=1)
+            ],
+            REGISTRATION_CONCURRENCY,
+        )
+        document["customers"].update(customer_entries)
+
+        async def fund(account_id: str, amount: int) -> None:
+            await root.send(account_id, Amount(amount), wait_until="FINAL")
+
+        funding = [
+            fund(entry["account_id"], GAS_FUND_YOCTO)
+            for entry in document["businesses"].values()
+        ]
+        funding.extend(
+            fund(
                 entry["account_id"],
-                Amount(GAS_FUND_YOCTO),
-                wait_until="FINAL",
+                int(entry["profile"]["requested_total_cents"])
+                * YOCTO_PER_USD_CENT
+                + GAS_FUND_YOCTO,
             )
-        for entry in document["customers"].values():
-            escrow = int(entry["profile"]["requested_total_cents"]) * YOCTO_PER_USD_CENT
-            await root.send(
-                entry["account_id"],
-                Amount(escrow + GAS_FUND_YOCTO),
-                wait_until="FINAL",
-            )
+            for entry in document["customers"].values()
+        )
+        await bounded(funding, FUNDING_CONCURRENCY)
 
         agents_path = Path(args.agents_file)
         agents_path.parent.mkdir(parents=True, exist_ok=True)

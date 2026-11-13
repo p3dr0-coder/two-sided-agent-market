@@ -16,7 +16,8 @@ This is a port of
 ## Quickstart (sandbox tokens only)
 
 Prerequisites: Docker, Rust 1.95 (the `rust-toolchain.toml` pins it), Python
-3.11+, and [uv](https://docs.astral.sh/uv/).
+3.11+, [uv](https://docs.astral.sh/uv/), and Binaryen's `wasm-opt` (>=133; the
+build post-processes the contract with `scripts/wasm_opt.sh`).
 
 ```bash
 uv sync --all-extras

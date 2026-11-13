@@ -12,9 +12,10 @@ mod settlement;
 mod types;
 mod welfare;
 
-use crate::types::{
-    AgentProfile, Proposal, StorageKey, TradeReceipt, WelfareCounters,
-};
+pub use crate::events::*;
+pub use crate::types::*;
+
+use crate::types::StorageKey as Prefix;
 use near_sdk::json_types::U128;
 use near_sdk::store::{LookupMap, LookupSet, Vector};
 use near_sdk::{AccountId, PanicOnDefault, env, near, require};
@@ -43,12 +44,12 @@ impl Contract {
         Self {
             owner: env::predecessor_account_id(),
             fee_bps,
-            agents: LookupMap::new(StorageKey::Agents),
-            proposals: LookupMap::new(StorageKey::Proposals),
-            trade_log: Vector::new(StorageKey::Trades),
-            paid_cents_by_customer: LookupMap::new(StorageKey::PaidCents),
-            customers_needs_met: LookupSet::new(StorageKey::NeedsMet),
-            proposal_count_by_customer: LookupMap::new(StorageKey::ProposalCounts),
+            agents: LookupMap::new(Prefix::Agents),
+            proposals: LookupMap::new(Prefix::Proposals),
+            trade_log: Vector::new(Prefix::Trades),
+            paid_cents_by_customer: LookupMap::new(Prefix::PaidCents),
+            customers_needs_met: LookupSet::new(Prefix::NeedsMet),
+            proposal_count_by_customer: LookupMap::new(Prefix::ProposalCounts),
             welfare: WelfareCounters::default(),
         }
     }
