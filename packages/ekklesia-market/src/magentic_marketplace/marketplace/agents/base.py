@@ -89,8 +89,13 @@ class BaseSimpleMarketplaceAgent(BaseAgent[TProfile]):
         Returns:
             Response containing the fetched messages
 
+        Each fetch resumes after the agent's highest seen message index, so
+        repeated polling does not re-scan messages the agent already has.
+
         """
         action = FetchMessages()
+        if self.last_fetch_index is not None:
+            action.after_index = self.last_fetch_index
 
         result = await self.execute_action(action)
 

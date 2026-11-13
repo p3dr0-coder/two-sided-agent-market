@@ -1,6 +1,6 @@
 # near-ekklesia
 
-**The primitive:** a two-sided agent market where every participant is a NEAR
+**The primitive:** a two-sided agent market. Each participant is a NEAR
 sub-account. A Rust contract turns the origin simulation's `OrderProposal` and
 `Payment` messages into native-NEAR escrow, and emits the origin welfare
 formula as NEP-297 `EVENT_JSON` logs. Businesses get a FunctionCall key scoped
@@ -72,7 +72,7 @@ sequential.
 customers, `fee_bps = 0`):
 
 ```
-Total marketplace customer utility = 1542308; purchase completion rate = 100% (R = 10000/100); needs-met = 20/20; invalid proposals accepted = 0 of 23 attempts (3 soft-rejected); gas/settle = 3.617 TGas
+Total marketplace customer utility = 1542308; purchase completion rate = 100% (R = 10000/100); needs-met = 20/20; invalid proposals accepted = 0 of 23; soft-rejected = 3; gas/settle = 3.617 TGas
 ```
 
 `W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`, `K = 23`,
@@ -141,7 +141,7 @@ creation cost, and installs:
 | `get_proposal(id)`, `get_agent(id)`, `get_trade_count()` | free | state reads |
 
 Welfare is the origin formula in integer cents: on the first matching trade for
-a customer, `utility += 2 * requested_total_cents - price_cents`; every other
+a customer, `utility += 2 * requested_total_cents - price_cents`; each other
 settled trade subtracts `price_cents`. `purchasing_customers` counts the first
 payment of a distinct customer, `needs_met_count` counts a customer once, and
 `purchase_completion_bps = purchasing_customers * 10000 /
@@ -183,8 +183,8 @@ committed. The demo never needs testnet funds.
 `competitive_description/contractors_control` is only 3×3, so the fixture uses
 those three pairs plus two pairs from `contractors/contractors_10_30`
 (`business_0005/customer_0002`, `business_0008/customer_0003`) and replicates
-each base customer four times with fresh ids/names. Every customer menu key is
-covered by the union of the five business menus, and every required amenity is
+each base customer four times with fresh ids/names. Each customer menu key is
+covered by the union of the five business menus, and each required amenity is
 true in that customer's base business. `scripts/fixtures.sh` reproduces and
 asserts the layout.
 
