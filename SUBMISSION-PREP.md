@@ -1,6 +1,6 @@
 # SUBMISSION-PREP — ekklesia (LOCAL DRAFT, NOT SUBMITTED)
 
-Track: `swarms` (spec `p0-swarms.md`). Deadline 2026-11-14T23:59:00Z. No push, no remote, no tag, no X post, no submit. Local commit only.
+Tracks: `swarms`, `agents`. Deadline 2026-11-14T23:59:00Z. No push, no remote, no tag, no X post, no submit. Local commit only.
 
 Judge quickstart, measured:
 
@@ -32,7 +32,7 @@ Payload fields, all EMPTY, and the human supplies every value:
 | leadName | 2-80 chars |
 | email | valid, <=160, max 2 submissions per address (Q-015) |
 | size | `1` / `2 - 4` / `4 - 6` / `6 - 8` / `8+` |
-| tracks | >=1 track id, each once; `swarms` fits |
+| tracks | >=1 track id, each once; `swarms`, `agents` fit |
 | nearAddress | 2-64 lowercase mainnet account the team creates |
 | projectUrl | http(s), <=300, public repo, unique |
 | demoUrl | http(s), <=300, published X post |
