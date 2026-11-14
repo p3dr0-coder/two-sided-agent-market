@@ -151,6 +151,6 @@ Keep testnet keys in your shell or gitignored `.env`. `data/demo_small` (5×20) 
 ## Baseline and disclosure
 
 Baseline: tag `pre-hackathon` marks the imported tree at `126ffe4` (microsoft/multi-agent-marketplace).
-Submission: tag `hackathon-submission` marks the submitted state; `git rev-parse --short hackathon-submission` prints it.
+Submission: tag `hackathon-submission` marks the submitted state. `git rev-parse --short hackathon-submission` prints it.
 Diff: `git diff pre-hackathon..hackathon-submission`. After publishing, `https://github.com/<owner>/<repo>/compare/pre-hackathon...hackathon-submission`.
 Libraries, templates and AI-generated code are listed in `ATTRIBUTION.md`.
