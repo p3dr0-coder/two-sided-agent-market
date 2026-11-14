@@ -35,15 +35,23 @@ sequenceDiagram
     M-->>P: Funded, proposal_accepted event
     end
     rect rgb(243,232,255)
-    Note over P,S: PHASE 4 — Search and rank matches
+    Note over P: PHASE 4 — Poll events, fetch_messages every 0.5 s
     loop polling_interval 0.5 s
     P->>P: fetch_messages from the simulation database
     end
-    P->>S: execute_search, lexical_rank or execute_optimal_search
-    S-->>P: ranked businesses via paginate_search_response
     end
     rect rgb(255,232,232)
-    Note over P,M: PHASE 5 — Settle and read welfare
+    Note over P,S: PHASE 5 — Search and filter, text match then constraints
+    P->>S: execute_search, SearchAlgorithm.FILTERED or LEXICAL
+    S->>S: _add_constraint_query on rating, amenities, menu items
+    end
+    rect rgb(224,247,250)
+    Note over P,S: PHASE 6 — Rank and match, rating sort then pagination
+    S->>S: lexical_rank, or is_subset plus rating sort
+    S-->>P: ranked businesses via paginate_search_response
+    end
+    rect rgb(255,248,225)
+    Note over P,M: PHASE 7 — Settle and read welfare
     P->>M: settle(proposal_id) as the business
     M-->>P: Settled, price minus fee to payout_account
     opt funded but expired
