@@ -144,3 +144,7 @@ Full suites run on the native host. `cargo test --workspace` passes the unit vec
 ## Attribution
 
 Origin: [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace), MIT. Paper: [arXiv 2510.25779](https://arxiv.org/abs/2510.25779). Details and the exact reused directories/modifications are in [ATTRIBUTION.md](ATTRIBUTION.md). `LICENSE` is the unchanged Microsoft MIT license.
+
+## Hackathon
+
+Track: `swarms`. Development ends 2026-11-14T23:59:00Z (UTC).
