@@ -12,6 +12,6 @@ Modified:
 
 - Package, CLI and `prog` renamed to `near-ekklesia`, `list` dropped `list-experiments` wording. Added `near-kit>=1.3.0` as the single Python signing stack.
 - Removed origin infra: `.devcontainer/`, `.github/`, `docs/`, `experiments/`, `packages/marketplace-visualizer/`, `data/data_generation_scripts/`, origin `uv.lock`, `sample.env`, `dev.env`, `TRANSPARENCY.md`, `SECURITY.md`, origin README.
-- Added `contracts/market` (Rust, near-sdk 5.30.2): sub-accounts, scoped keys, escrow, soft rejects, EVENT_JSON welfare. Added `packages/ekklesia-market/src/magentic_marketplace/near/` (client, adapter, feed, bootstrap, probes) and deterministic agents in `marketplace/agents/scripted_business.py`, `scripted_customer.py`.
+- Added `contracts/market` (Rust, near-sdk 5.30.2): sub-accounts, scoped keys, escrow, soft rejects, EVENT_JSON welfare. Added `packages/ekklesia-market/src/magentic_marketplace/near/` (client, adapter, events, bootstrap, probes) and deterministic agents in `marketplace/agents/scripted_business.py`, `scripted_customer.py`.
 - `run_experiment.py` defaults to SQLite (`data/<experiment_name>.db`) and keeps the Postgres path. `run_analytics.py` adds the `near=True` cross-check.
 - Added `data/demo_small` (5×20), `scripts/fixtures.sh`, `scripts/setup_local.sh`, `scripts/demo.sh`, `scripts/measure.sh`, the sandbox test, `README.md`, `.env.example`, `ATTRIBUTION.md`, the Cargo workspace, and `.gitignore` entries. All reused code remains MIT.

@@ -20,7 +20,7 @@ sequenceDiagram
     end
     rect rgba(230,247,235,0.20)
     Note over P,B: PHASE 2 — Register agents and keys
-    P->>+M: register_agent(agent_name, profile, public_key), 0.007 NEAR
+    P->>+M: register_agent(agent_name, profile, public_key), deposit >= storage + 0.007 NEAR
     M->>B: sub-account agent_name.contract, scoped key post_proposal,settle
     M-->>-P: scoped key installed, customer key FullAccess
     end
@@ -41,7 +41,7 @@ sequenceDiagram
     P->>+S: execute_search, SearchAlgorithm.FILTERED or LEXICAL
     S->>S: _add_constraint_query on rating, amenities, menu items
     S->>S: lexical_rank, or is_subset plus rating sort
-    S-->>-P: ranked businesses via paginate_search_response
+    S-->>-P: ranked businesses, paginated like origin search
     end
     rect rgba(255,248,225,0.20)
     Note over P,M: PHASE 7 — Settle and read welfare
@@ -71,9 +71,9 @@ Install Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https:/
 | `near-ekklesia analyze data/demo.db --db-type sqlite --near` | origin analytics, on-chain headline, welfare assertion |
 | `bash scripts/measure.sh` | `numbers` run, 3 invalid proposals, 1 headline |
 | `python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy` | testnet registration via `NEAR_ACCOUNT_ID`/`NEAR_PRIVATE_KEY` |
-| `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, ranking tests (offline; 26 passed in 9 s, measured 2026-11-12) |
+| `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, ranking tests (offline; 26 passed in 9 s, measured 2026-11-12 at commit 20af4e9; the suite has since grown) |
 
-Measured 2026-11-12 by `scripts/measure.sh` on `nearprotocol/sandbox`-equivalent native nearcore 2.14, 5×20, `fee_bps = 0`. Symbol form: `W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`, `G = 3.617 TGas`, medians `K = 23`, `J = 3`. Independent runs: `demo.sh` 20/0, `measure.sh` 23/3. Scale 20×5 differs from paper §4.1 (33/99, 100/300), so W and N are not paper-comparable.
+Measured 2026-11-12 by `scripts/measure.sh` on `nearprotocol/sandbox`-equivalent native nearcore 2.14.x, 5×20, `fee_bps = 0`. Symbol form: `W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`, `G = 3.617 TGas`, medians `K = 23`, `J = 3`. Independent runs: `demo.sh` 20/0, `measure.sh` 23/3. Scale 20×5 differs from paper §4.1 (33/99, 100/300), so W and N are not paper-comparable.
 ```
 Total marketplace customer utility = 1542308; purchase completion rate = 100% (R = 10000/100); needs-met = 20/20; invalid proposals accepted = 0 of 23; soft-rejected = 3; gas/settle = 3.617 TGas
 ```
@@ -116,8 +116,8 @@ python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy
 
 ## Limits and verification
 
-- **Limits:** sandbox and demo only, no real fund, no mainnet deploy; exact cents checked, not truthful YAML. Orchestrator funds `register_agent`, `owner` and `fee_bps` set at `new`, `payout_account` needs FullAccess, `refund` permissionless, upgrades `#[init(ignore_state)]`.
-- **Measured results:** counts and check outputs in [SUBMISSION-PREP.md](SUBMISSION-PREP.md). Raw wasm `234,809 B`, `cargo near build non-reproducible-wasm` `193,807 B`, `scripts/wasm_opt.sh` (`-Oz --converge`) `193,278 B`; cdylib-only `173,555 B` raw, measured, not adopted. `lexical_rank` n=150: `1.85×` faster. `_client_for` 500 lookups: `5.9×` faster.
+- **Limits:** sandbox and demo only, no real fund, no mainnet deploy; exact cents checked, not truthful YAML. Orchestrator funds `register_agent`, `owner` and `fee_bps` set at `new`, `payout_account` needs FullAccess, `refund` permissionless. No upgrade constructor: redeploys need `#[init(ignore_state)]`, not yet implemented.
+- **Measured results:** counts and check outputs in [SUBMISSION-PREP.md](SUBMISSION-PREP.md). Raw wasm `234,809 B`, `cargo near build non-reproducible-wasm` `193,807 B`, `scripts/wasm_opt.sh` (`-Oz --converge`) `193,278 B`, measured 2026-11-13 at commit 6821307 (near-sdk 5.30.2; the only later contract change, b0ed7eb, is formatting plus a semantically identical price-tolerance guard); cdylib-only `173,555 B` raw, measured, not adopted. `lexical_rank` n=150: `1.85×` faster than the origin algorithm. `_client_for` 500 lookups: `5.9×` faster than per-call signing. Local micro-benchmarks, harness not committed.
 - **Attribution:** [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), [arXiv 2510.25779](https://arxiv.org/abs/2510.25779), [ATTRIBUTION.md](ATTRIBUTION.md), unchanged `LICENSE`. Tracks `swarms` and `agents` end 2026-11-14T23:59:00Z (UTC).
 
 ## Claim → evidence
@@ -129,7 +129,7 @@ python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy
 | Sandbox flow: invalid proposals soft-reject, valid ones settle | `tests/sandbox_market.rs:13` (`market_soft_rejects_invalid_and_settles_valid`) |
 | Exact-cent conversion is `Decimal`-based, no float drift | `packages/ekklesia-market/src/magentic_marketplace/near/client.py:32` (`to_cents`) |
 | Market run + welfare headline | "Do X -> see Y" table and the measured block above (`scripts/demo.sh`, `scripts/measure.sh`) |
-| Near/offline suite green | `pytest packages/ekklesia-market/tests/near` → 26 passed in 9 s (measured 2026-11-12) |
+| Near/offline suite green | `pytest packages/ekklesia-market/tests/near` → 26 passed in 9 s (measured 2026-11-12 at commit 20af4e9; the suite has since grown) |
 
 ## Baseline and disclosure
 

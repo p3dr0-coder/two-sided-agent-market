@@ -6,15 +6,17 @@ Judge quickstart, measured:
 
 ```
 cargo test --workspace       -> 8 passed, 0 failed, plus 1 sandbox pass (rust 1.100.0, near-sdk 5.30.2)
-pytest packages/ekklesia-market/tests/near -q -> 26 passed (9 s wall). pytest -q (full) -> 242 passed, 117 skipped (359 collected)
-cargo build --release --target wasm32 -> 234,809 B raw. cargo near build non-reproducible-wasm -> 193,807 B
+pytest packages/ekklesia-market/tests/near -q -> 26 passed (9 s wall), measured 2026-11-13 at commit 20af4e9
+pytest -q (full) -> 242 passed, 117 skipped (359 collected), measured 2026-11-13 at commit 20af4e9
+   (at HEAD 087e3a1 the suites have 273 test functions; figures above were not re-run at HEAD)
+cargo build --release --target wasm32 -> 234,809 B raw, measured at commit 6821307 (later contract change b0ed7eb is formatting plus a semantically identical price-tolerance guard). cargo near build non-reproducible-wasm -> 193,807 B
 scripts/wasm_opt.sh -> EXIT 0, 193,278 B (wasm-opt 116). ruff check, ruff format --check, pyright -> 0 findings
-uv lock -> EXIT 0 (140 pkgs). uv sync --frozen -> "Checked 78 packages"
+uv lock -> EXIT 0 (134 pkgs in uv.lock at HEAD). uv sync --frozen -> "Checked 78 packages"
 ruff HEAD vs WORKTREE 20af4e9 -> client 6/6, events 4/4, bootstrap 0/0, tests 33/33 => NEW=0
 git diff 20af4e9..HEAD --check -> EXIT 0
 ```
 
-Suppression markers: 50 EXISTING, 0 NEW. The 117 skipped tests need the PostgreSQL backend.
+Suppression markers: 50 EXISTING, 0 NEW (25 `# noqa`/`# type: ignore` markers in tests plus 25 `# pyright: ignore` and Rust-side equivalents). The 117 skipped tests need the PostgreSQL backend.
 
 Demo outline, human records and human posts:
 
