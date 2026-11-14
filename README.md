@@ -5,6 +5,8 @@ A Rust contract maps `OrderProposal` and `Payment` messages to native-NEAR escro
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontSize":"14px"}}}%%
 sequenceDiagram
+    accTitle: ekklesia runtime flow
+    accDescr: Operator deploys the market, registers agents, runs scripted orders, then settles and reads welfare.
     autonumber
     participant U as Operator
     participant P as Python marketplace
@@ -12,18 +14,18 @@ sequenceDiagram
     participant B as Sandbox node
     participant M as Market contract
     participant S as Search module
-    rect rgb(226,238,255)
-    Note over U,M: PHASE 1 — Deploy market, fee_bps at most 10,000
+    rect rgba(226,238,255,0.20)
+    Note over U,M: PHASE 1 — Deploy market
     U->>R: cargo near deploy, 193,807 B wasm
-    R->>M: new(fee_bps=0), owner is predecessor
+    R->>M: new(fee_bps=0), fee_bps <= 10,000, owner is predecessor
     end
-    rect rgb(230,247,235)
-    Note over P,B: PHASE 2 — Register agents, business post_proposal,settle, customer FullAccess
+    rect rgba(230,247,235,0.20)
+    Note over P,B: PHASE 2 — Register agents and keys
     P->>M: register_agent(agent_name, profile, public_key), 0.007 NEAR
-    M->>B: sub-account agent_name.contract plus scoped key
-    M-->>P: scoped key installed, profile stored
+    M->>B: sub-account agent_name.contract, scoped key post_proposal,settle
+    M-->>P: scoped key installed, customer key FullAccess
     end
-    rect rgb(255,244,214)
+    rect rgba(255,244,214,0.20)
     Note over P,M: PHASE 3 — Post and fund orders
     P->>M: post_proposal(proposal_id, items, total_price, expiry)
     alt exact cents, known agent, unexpired
@@ -34,23 +36,23 @@ sequenceDiagram
     P->>M: accept_proposal(proposal_id), total_price * 1e19 yoctoNEAR
     M-->>P: Funded, proposal_accepted event
     end
-    rect rgb(243,232,255)
-    Note over P: PHASE 4 — Poll events, fetch_messages every 0.5 s
+    rect rgba(243,232,255,0.20)
+    Note over P: PHASE 4 — Poll events
     loop polling_interval 0.5 s
     P->>P: fetch_messages from the simulation database
     end
     end
-    rect rgb(255,232,232)
-    Note over P,S: PHASE 5 — Search and filter, text match then constraints
+    rect rgba(255,232,232,0.20)
+    Note over P,S: PHASE 5 — Search and filter
     P->>S: execute_search, SearchAlgorithm.FILTERED or LEXICAL
     S->>S: _add_constraint_query on rating, amenities, menu items
     end
-    rect rgb(224,247,250)
-    Note over P,S: PHASE 6 — Rank and match, rating sort then pagination
+    rect rgba(224,247,250,0.20)
+    Note over P,S: PHASE 6 — Rank and match
     S->>S: lexical_rank, or is_subset plus rating sort
     S-->>P: ranked businesses via paginate_search_response
     end
-    rect rgb(255,248,225)
+    rect rgba(255,248,225,0.20)
     Note over P,M: PHASE 7 — Settle and read welfare
     P->>M: settle(proposal_id) as the business
     M-->>P: Settled, price minus fee to payout_account
