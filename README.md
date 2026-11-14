@@ -1,7 +1,5 @@
 # near-ekklesia
 
-A Rust contract maps `OrderProposal` and `Payment` messages to native-NEAR escrow across per-agent sub-accounts. It emits origin welfare as NEP-297 `EVENT_JSON` logs. Businesses use a FunctionCall key (`post_proposal,settle`). Customers attach escrow with a FullAccess key. Read `get_welfare()` or sum `TradeSettled` events. Port of [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), see [ATTRIBUTION.md](ATTRIBUTION.md).
-
 Tracks: `swarms`, `agents` (end 2026-11-14T23:59:00Z) · License: MIT ([LICENSE](./LICENSE)) · Baseline: tag `pre-hackathon` at `126ffe4` (microsoft/multi-agent-marketplace); diff `git diff pre-hackathon..hackathon-submission`.
 
 ```mermaid
@@ -75,8 +73,6 @@ Install Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https:/
 | `python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy` | testnet registration via `NEAR_ACCOUNT_ID`/`NEAR_PRIVATE_KEY` |
 | `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, ranking tests (offline; 26 passed in 9 s, measured 2026-11-12) |
 
-`run` writes `data/<experiment_name>.db` by default, `--db-path` overrides, `--override-db` resets the schema. SQLite is default. Postgres: `docker compose up -d postgres`, `--db-type postgres`.
-
 Measured 2026-11-12 by `scripts/measure.sh` on `nearprotocol/sandbox`-equivalent native nearcore 2.14, 5×20, `fee_bps = 0`. Symbol form: `W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`, `G = 3.617 TGas`, medians `K = 23`, `J = 3`. Independent runs: `demo.sh` 20/0, `measure.sh` 23/3. Scale 20×5 differs from paper §4.1 (33/99, 100/300), so W and N are not paper-comparable.
 ```
 Total marketplace customer utility = 1542308; purchase completion rate = 100% (R = 10000/100); needs-met = 20/20; invalid proposals accepted = 0 of 23; soft-rejected = 3; gas/settle = 3.617 TGas
@@ -94,8 +90,6 @@ packages/ekklesia-market/src/magentic_marketplace/
 tests/sandbox_market.rs | scripts/fixtures.sh (data/demo_small)
 ```
 
-Settlement wraps `SimpleMarketplaceProtocol` and delegates each message to the simulation database. `register_agent(agent_name, profile, public_key)` creates `"{agent_name}.{contract}"` for 0.007 NEAR with a scoped business key (`post_proposal,settle`); the customer's FullAccess key funds escrow in `accept_proposal`. `profile.payout_account` needs FullAccess, so scoped sub-accounts are rejected.
-
 | Method | Caller | Behavior |
 |---|---|---|
 | `new(fee_bps)` | deployer | `owner` = predecessor, `fee_bps` <= 10,000 |
@@ -106,9 +100,6 @@ Settlement wraps `SimpleMarketplaceProtocol` and delegates each message to the s
 | `refund(proposal_id)` | anyone | `Funded` after expiry to `Refunded`, escrow returned |
 | `get_welfare()`, `get_proposal(id)`, `get_agent(id)`, `get_trade_count()` | free | counters, completion bps, average utility, state |
 
-Welfare in cents. First matching trade: `utility += 2 * requested_total_cents - price_cents`. Later trades subtract `price_cents`. `purchasing_customers` counts distinct buyers, `needs_met_count` once. `purchase_completion_bps = purchasing_customers * 10000 / registered_customers`.
-
-Events: `agent_registered`, `proposal_posted`, `proposal_accepted`, `trade_settled`, `proposal_rejected`, `welfare_snapshot`. Python asserts `get_welfare().total_customer_utility_cents == Σ trade_settled.customer_utility_delta_cents`.
 ```json
 EVENT_JSON:{"standard":"ekklesia-market","version":"1.0.0","event":"trade_settled","data":[{"proposal_id":"...","customer":"c1.ekklesia.sandbox","business":"b1.ekklesia.sandbox","price_cents":"15445","fee_cents":"0","needs_met":true,"customer_utility_delta_cents":"18353","business_revenue_delta_cents":"15445"}]}
 ```
@@ -122,8 +113,6 @@ near contract call-function as-transaction ekklesia.testnet new json-args '{"fee
 export MARKET_CONTRACT_ID=ekklesia.testnet NEAR_NETWORK=testnet NEAR_RPC_URL=https://test.rpc.fastnear.com
 python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy
 ```
-
-Keep testnet keys in your shell or gitignored `.env`.
 
 ## Limits and verification
 
