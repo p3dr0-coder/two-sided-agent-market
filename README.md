@@ -1,93 +1,123 @@
 # near-ekklesia
 
-A Rust contract maps `OrderProposal` and `Payment` messages to native-NEAR escrow across per-agent sub-accounts and emits origin welfare as NEP-297 `EVENT_JSON` logs. Businesses use a FunctionCall key (`post_proposal,settle`); customers use a FullAccess key to attach escrow. Read `get_welfare()`, or sum `TradeSettled` events.
+A Rust contract maps `OrderProposal` and `Payment` messages to native-NEAR escrow across per-agent sub-accounts. It emits origin welfare as NEP-297 `EVENT_JSON` logs. Businesses use a FunctionCall key (`post_proposal,settle`). Customers attach escrow with a FullAccess key. Read `get_welfare()` or sum `TradeSettled` events. Port of [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), see [ATTRIBUTION.md](ATTRIBUTION.md).
 
-Port of [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT) to NEAR. See [ATTRIBUTION.md](ATTRIBUTION.md).
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant U as Operator
+    participant P as Python marketplace
+    participant R as NEAR RPC
+    participant B as Sandbox node
+    participant M as Market contract
+    participant S as Search module
+    rect rgb(226,238,255)
+    Note over U,M: PHASE 1 — Deploy market, fee_bps at most 10,000
+    U->>R: cargo near deploy, 193,807 B wasm
+    R->>M: new(fee_bps=0), owner is predecessor
+    end
+    rect rgb(230,247,235)
+    Note over P,B: PHASE 2 — Register agents, business post_proposal,settle, customer FullAccess
+    P->>M: register_agent(agent_name, profile, public_key), 0.007 NEAR
+    M->>B: sub-account agent_name.contract plus scoped key
+    M-->>P: scoped key installed, profile stored
+    end
+    rect rgb(255,244,214)
+    Note over P,M: PHASE 3 — Post and fund orders
+    P->>M: post_proposal(proposal_id, items, total_price, expiry)
+    alt exact cents, known agent, unexpired
+    M-->>P: Posted, proposal_posted event
+    else bad input
+    M-->>P: soft reject, counter and proposal_rejected event
+    end
+    P->>M: accept_proposal(proposal_id), total_price * 1e19 yoctoNEAR
+    M-->>P: Funded, proposal_accepted event
+    end
+    rect rgb(243,232,255)
+    Note over P,S: PHASE 4 — Search and rank matches
+    loop polling_interval 0.5 s
+    P->>P: fetch_messages from the simulation database
+    end
+    P->>S: execute_search, lexical_rank or execute_optimal_search
+    S-->>P: ranked businesses via paginate_search_response
+    end
+    rect rgb(255,232,232)
+    Note over P,M: PHASE 5 — Settle and read welfare
+    P->>M: settle(proposal_id) as the business
+    M-->>P: Settled, price minus fee to payout_account
+    opt funded but expired
+    P->>M: refund(proposal_id) from any caller
+    M-->>P: Refunded, escrow returns to the customer
+    end
+    par fetch_events, Semaphore(4) in flight
+    P->>R: transaction_status for each logged tx
+    and
+    P->>R: transaction_status for each logged tx
+    end
+    P->>M: get_welfare(), then assert_welfare against TradeSettled
+    M-->>P: counters plus gas per settle
+    end
+```
 
 ## Quickstart (sandbox tokens only)
 
-Requires Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https://docs.astral.sh/uv/), and Binaryen `wasm-opt` >=116 (`scripts/wasm_opt.sh`).
+Install Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https://docs.astral.sh/uv/), Binaryen `wasm-opt` >=116 (`scripts/wasm_opt.sh`). Run `uv sync --all-extras`, `source .venv/bin/activate`, `bash scripts/demo.sh`.
 
-```bash
-uv sync --all-extras
-source .venv/bin/activate
-bash scripts/demo.sh
-```
-
-`scripts/demo.sh` runs seven steps:
-1. Starts `nearprotocol/sandbox:2.13.4` on `127.0.0.1:3030` (`setup_local.sh` skips Docker when using a native node).
-2. Builds `contracts/market` (`wasm32-unknown-unknown`), deploys `ekklesia.sandbox`, and runs `new({"fee_bps": 0})`.
-3. Registers `b1..b5.ekklesia.sandbox` and `c1..c20.ekklesia.sandbox`, saving keys to `.sandbox/agents.json` (`0600`).
-4. Funds each customer with escrow plus gas money.
-5. Runs the deterministic no-LLM market into `data/demo.db`.
-6. Prints analytics and the on-chain headline.
-7. Posts, escrows, expires, and refunds one proposal to verify refunds.
-
-Without Docker, start nearcore (`near-sandbox --home DIR init`, `near-sandbox --home DIR run`) and export `NEAR_SANDBOX_URL`, `NEAR_ROOT_ACCOUNT`, `NEAR_ROOT_PRIVATE_KEY`, and `MARKET_CONTRACT_ID` (e.g. `ekklesia.test.near`). Demo peg: `1 NEAR = $1000` (`CENTS_PER_NEAR = 100_000`), so `1` cent equals `1e19` yoctoNEAR. No LLM keys or real funds are used.
+`scripts/demo.sh` runs seven steps. It starts `nearprotocol/sandbox:2.13.4` on `127.0.0.1:3030`, builds `contracts/market` (`wasm32-unknown-unknown`), deploys `ekklesia.sandbox`, calls `new({"fee_bps": 0})`. It registers `b1..b5.ekklesia.sandbox` and `c1..c20.ekklesia.sandbox`, keys in `.sandbox/agents.json` (`0600`). Escrow plus gas per customer. A deterministic no-LLM market writes `data/demo.db`. It prints analytics, headline. Last, it posts, escrows, expires, and refunds one proposal. Without Docker, run `near-sandbox --home DIR init` and `near-sandbox --home DIR run`. Export `NEAR_SANDBOX_URL`, `NEAR_ROOT_ACCOUNT`, `NEAR_ROOT_PRIVATE_KEY`, `MARKET_CONTRACT_ID` (e.g. `ekklesia.test.near`). `setup_local.sh` skips Docker for a native node. Peg: `1 NEAR = $1000` (`CENTS_PER_NEAR = 100_000`), so `1` cent is `1e19` yoctoNEAR. No LLM key or real fund is used.
 
 ## Do X -> see Y
 
 | Do this | See this |
 |---|---|
 | `bash scripts/demo.sh` | fresh sandbox, 5x20 agents, `data/demo.db`, headline, `refund probe OK` |
-| `near-ekklesia run data/demo_small --near --scripted --experiment-name demo --db-type sqlite --override-db` | scripted SQLite run with on-chain settlement |
+| `near-ekklesia run data/demo_small --near --scripted --experiment-name demo --db-type sqlite --override-db` | scripted SQLite run, on-chain settlement |
 | `near-ekklesia analyze data/demo.db --db-type sqlite --near` | origin analytics, on-chain headline, welfare assertion |
-| `bash scripts/measure.sh` | `numbers` run, 3 invalid proposals, 1 headline line |
+| `bash scripts/measure.sh` | `numbers` run, 3 invalid proposals, 1 headline |
 | `python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy` | testnet registration via `NEAR_ACCOUNT_ID`/`NEAR_PRIVATE_KEY` |
-| `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, and ranking tests (offline) |
-| `cargo test --workspace` | Rust unit vectors plus `near-workspaces` sandbox test |
+| `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, ranking tests (offline) |
+| `cargo test --workspace` | Rust unit vectors, `near-workspaces` sandbox test |
 
-`run` defaults to `data/<experiment_name>.db` (`--db-path` overrides; `--override-db` resets SQLite or Postgres schema). SQLite is default; Postgres (`docker compose up -d postgres`, `--db-type postgres`) is opt-in.
+`run` writes `data/<experiment_name>.db` by default, `--db-path` overrides, `--override-db` resets the schema. SQLite is default. Postgres: `docker compose up -d postgres`, `--db-type postgres`.
 
-`scripts/measure.sh` (`nearprotocol/sandbox`-equivalent native nearcore 2.14, 5×20, `fee_bps = 0`, 2026-11-12) measured:
+Measured 2026-11-12 by `scripts/measure.sh` on `nearprotocol/sandbox`-equivalent native nearcore 2.14, 5×20, `fee_bps = 0`:
 ```
 Total marketplace customer utility = 1542308; purchase completion rate = 100% (R = 10000/100); needs-met = 20/20; invalid proposals accepted = 0 of 23; soft-rejected = 3; gas/settle = 3.617 TGas
 ```
-`W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`, `K = 23`, `J = 3`, `G = 3.617 TGas` (median). Two independent runs (`demo.sh`: 20/0; `measure.sh`: 23/3; `remote-w4/w4-demo.log`, `remote-w4/w4-numbers.log`) matched. Scale 20×5 differs from paper §4.1 (33/99, 100/300), so W and N are not paper-comparable.
+`W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`. Medians: `K = 23`, `J = 3`, `G = 3.617 TGas`. Independent runs: `demo.sh` 20/0, `measure.sh` 23/3 (`remote-w4/w4-demo.log`, `remote-w4/w4-numbers.log`). Scale 20×5 differs from paper §4.1 (33/99, 100/300), so W and N are not paper-comparable.
 
-## Architecture map
+## Architecture and contract methods
 
-```
+```text
 contracts/market/src/
-  lib.rs          Contract state + #[init] new(fee_bps)
-  types.rs        Role, AgentProfile, OrderItem, Proposal(+Status), TradeReceipt, WelfareCounters, WelfareSummary, StorageKey b"a"/b"p"/b"t"/b"c"/b"n"/b"q"
-  settlement.rs   register_agent, post_proposal, accept_proposal, settle, refund
-  welfare.rs      get_welfare, get_proposal, get_agent, get_trade_count
-  events.rs       #[near(event_json(standard="ekklesia-market"))]
+  lib.rs  Contract state, #[init] new(fee_bps) | types.rs  Role, AgentProfile, OrderItem, Proposal(+Status), TradeReceipt, WelfareCounters, WelfareSummary, StorageKey b"a"/b"p"/b"t"/b"c"/b"n"/b"q"
+  settlement.rs  register_agent, post_proposal, accept_proposal, settle, refund | welfare.rs  get_welfare, get_proposal, get_agent, get_trade_count | events.rs  #[near(event_json(standard="ekklesia-market"))]
 packages/ekklesia-market/src/magentic_marketplace/
-  near/           client.py, adapter.py (NearSettlementProtocol(SimpleMarketplaceProtocol)), events.py, bootstrap.py, refund_probe.py, manipulation_probe.py
-  marketplace/agents/scripted_business.py / scripted_customer.py
-  experiments/    run_experiment.py, run_analytics.py (--near)
-tests/sandbox_market.rs   |   scripts/fixtures.sh (data/demo_small)
+  near/  client.py, adapter.py (NearSettlementProtocol(SimpleMarketplaceProtocol)), events.py, bootstrap.py, refund_probe.py, manipulation_probe.py
+  marketplace/agents/  scripted_business.py, scripted_customer.py | experiments/  run_experiment.py, run_analytics.py (--near)
+tests/sandbox_market.rs | scripts/fixtures.sh (data/demo_small)
 ```
 
-Settlement wraps `SimpleMarketplaceProtocol` additively and delegates every message to the simulation database.
-
-### Agent model & contract methods
-
-`register_agent(agent_name, profile, public_key)` creates `"{agent_name}.{contract}"` (0.007 NEAR creation cost):
-- **Business:** `add_access_key_allowance(pk, Unlimited, contract, "post_proposal,settle")`; `profile.payout_account` must hold FullAccess (scoped sub-accounts are rejected).
-- **Customer:** `add_full_access_key(pk)` to attach escrow in `accept_proposal`.
+Settlement wraps `SimpleMarketplaceProtocol` and delegates each message to the simulation database. `register_agent(agent_name, profile, public_key)` creates `"{agent_name}.{contract}"` for 0.007 NEAR. Business key: `add_access_key_allowance(pk, Unlimited, contract, "post_proposal,settle")`. Customer key: `add_full_access_key(pk)` for escrow in `accept_proposal`. `profile.payout_account` needs FullAccess, so scoped sub-accounts are rejected.
 
 | Method | Caller | Behavior |
 |---|---|---|
-| `new(fee_bps)` | deployer | `owner` = predecessor; `fee_bps` ≤ 10,000 |
-| `register_agent(agent_name, profile, public_key)` | orchestrator, payable | validates caps/name/uniqueness; quotes storage + 0.007 NEAR |
-| `post_proposal(proposal_id, customer, items, total_price, expiry)` | business | non-payable; exact-cent checks; soft-rejects invalid input (counter + event) |
-| `accept_proposal(proposal_id)` | customer, payable | `Posted` → `Funded` on exact `total_price * 1e19` before expiry |
-| `settle(proposal_id)` | business | `Funded` → `Settled` before transfer (`price - fee` to `payout_account`); emits `trade_settled` + `welfare_snapshot` |
-| `refund(proposal_id)` | anyone | `Funded` after expiry → `Refunded` before returning escrow |
-| `get_welfare()`, `get_proposal(id)`, `get_agent(id)`, `get_trade_count()` | free | view counters, completion bps, average utility, state |
+| `new(fee_bps)` | deployer | `owner` = predecessor, `fee_bps` <= 10,000 |
+| `register_agent(agent_name, profile, public_key)` | orchestrator, payable | caps, name, uniqueness checks, storage + 0.007 NEAR |
+| `post_proposal(proposal_id, customer, items, total_price, expiry)` | business | non-payable, exact cents, soft reject (counter + event) |
+| `accept_proposal(proposal_id)` | customer, payable | `Posted` to `Funded` on exact `total_price * 1e19` before expiry |
+| `settle(proposal_id)` | business | `Funded` to `Settled` before transfer (`price - fee` to `payout_account`), emits `trade_settled` + `welfare_snapshot` |
+| `refund(proposal_id)` | anyone | `Funded` after expiry to `Refunded`, escrow returned |
+| `get_welfare()`, `get_proposal(id)`, `get_agent(id)`, `get_trade_count()` | free | counters, completion bps, average utility, state |
 
-Welfare in cents: first matching trade runs `utility += 2 * requested_total_cents - price_cents`; later trades subtract `price_cents`. `purchasing_customers` counts distinct buyers; `needs_met_count` counts once; `purchase_completion_bps = purchasing_customers * 10000 / registered_customers`.
+Welfare in cents. First matching trade: `utility += 2 * requested_total_cents - price_cents`. Later trades subtract `price_cents`. `purchasing_customers` counts distinct buyers, `needs_met_count` once. `purchase_completion_bps = purchasing_customers * 10000 / registered_customers`.
 
-Events (`agent_registered`, `proposal_posted`, `proposal_accepted`, `trade_settled`, `proposal_rejected`, `welfare_snapshot`):
+Events: `agent_registered`, `proposal_posted`, `proposal_accepted`, `trade_settled`, `proposal_rejected`, `welfare_snapshot`. Python asserts `get_welfare().total_customer_utility_cents == Σ trade_settled.customer_utility_delta_cents`.
 ```json
 EVENT_JSON:{"standard":"ekklesia-market","version":"1.0.0","event":"trade_settled","data":[{"proposal_id":"...","customer":"c1.ekklesia.sandbox","business":"b1.ekklesia.sandbox","price_cents":"15445","fee_cents":"0","needs_met":true,"customer_utility_delta_cents":"18353","business_revenue_delta_cents":"15445"}]}
 ```
-Python asserts `get_welfare().total_customer_utility_cents == Σ trade_settled.customer_utility_delta_cents`.
 
-### Testnet deployment & Data
+### Testnet and data
 
 ```bash
 near account create-account sponsor-by-faucet-service ekklesia.testnet autogenerate-new-keypair save-to-keychain network-config testnet create
@@ -96,16 +126,13 @@ near contract call-function as-transaction ekklesia.testnet new json-args '{"fee
 export MARKET_CONTRACT_ID=ekklesia.testnet NEAR_NETWORK=testnet NEAR_RPC_URL=https://test.rpc.fastnear.com
 python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy
 ```
-Keep testnet keys in your shell or gitignored `.env`. `data/demo_small` (5×20) combines 3 pairs from `competitive_description/contractors_control` plus 2 from `contractors/contractors_10_30` (`business_0005/customer_0002`, `business_0008/customer_0003`), replicated 4× (`scripts/fixtures.sh`).
 
-## Limits, verification & attribution
+Keep testnet keys in your shell or gitignored `.env`. `data/demo_small` (5×20) combines 3 pairs from `competitive_description/contractors_control` plus 2 from `contractors/contractors_10_30` (`business_0005/customer_0002`, `business_0008/customer_0003`), replicated 4 times by `scripts/fixtures.sh`.
 
-- **Sandbox/demo only:** no real funds or mainnet deploy.
-- **Honest inputs:** contract verifies exact cents, not truthful YAML valuations.
-- **Trust & expiry:** orchestrator funds `register_agent`; `owner` and `fee_bps` are fixed at `new`; `payout_account` needs FullAccess; permissionless `refund` uses block timestamps; upgrades use `#[init(ignore_state)]`.
-- **Verification:** full `cargo test --workspace`, `pytest packages/ekklesia-market/tests/near`, and `bash scripts/demo.sh` pass (`WORKLOG.md` logs).
-- **Attribution:** [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), [arXiv 2510.25779](https://arxiv.org/abs/2510.25779), [ATTRIBUTION.md](ATTRIBUTION.md), unchanged `LICENSE`.
+## Limits and verification
 
-## Hackathon
-
-Track: `swarms`. Development ends 2026-11-14T23:59:00Z (UTC).
+- **Sandbox and demo only:** no real fund, no mainnet deploy. Exact cents checked, not truthful YAML.
+- **Trust and expiry:** orchestrator funds `register_agent`. `owner` and `fee_bps` set at `new`. `payout_account` needs FullAccess. `refund` permissionless. Upgrades: `#[init(ignore_state)]`.
+- **Verification:** `cargo test --workspace`: `8` unit and 1 sandbox test. `pytest -q`: `242 passed, 117 skipped`. `bash scripts/demo.sh` passes (`WORKLOG.md`).
+- **Build size and probes:** raw wasm `234,809 B`, `cargo near build non-reproducible-wasm` `193,807 B`, `scripts/wasm_opt.sh` (`-Oz --converge`) `193,278 B`. `lexical_rank` n=150: `1.85×` faster. `_client_for` 500 lookups: `5.9×` faster. cdylib-only: `173,555 B` raw, measured, not adopted.
+- **Attribution:** [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), [arXiv 2510.25779](https://arxiv.org/abs/2510.25779), [ATTRIBUTION.md](ATTRIBUTION.md), unchanged `LICENSE`. Track `swarms` ends 2026-11-14T23:59:00Z (UTC).
