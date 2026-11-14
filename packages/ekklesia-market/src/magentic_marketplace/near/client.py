@@ -25,7 +25,7 @@ YOCTO_PER_USD_CENT = YOCTO_PER_NEAR // CENTS_PER_NEAR
 TTL_NS = 300_000_000_000
 AGENT_DEPOSIT = 100_000_000_000_000_000_000_000  # 0.1 NEAR
 BIZ_DEPOSIT = 500_000_000_000_000_000_000_000  # 0.5 NEAR
-GAS_100_TGAS = "100 Tgas"
+GAS_100 = "100 Tgas"
 EVENT_STD = "ekklesia-market"
 
 
@@ -105,6 +105,7 @@ class NearClient:
             self.tx_log_path = Path(".sandbox/tx.jsonl")
 
         self._agents: dict[str, dict[str, Any]] | None = None
+        self._account_to_sim_id: dict[str, str] = {}
         self._signers: dict[str, KeyPairSigner] = {}
 
         if client is not None:
@@ -156,10 +157,10 @@ class NearClient:
     def _client_for(self, account_id: str) -> AsyncNear:
         if account_id == self.root_account_id:
             return self._client
-        agents = self._agents_by_sim_id()
-        for sim_id, entry in agents.items():
-            if str(entry["account_id"]) == account_id:
-                return self._client.with_signer(self.signer_for(sim_id))
+        self._agents_by_sim_id()
+        sim_id = self._account_to_sim_id.get(account_id)
+        if sim_id is not None:
+            return self._client.with_signer(self.signer_for(sim_id))
         raise KeyError(f"no signer for account {account_id!r}")
 
     def _agents_by_sim_id(self) -> dict[str, dict[str, Any]]:
@@ -176,8 +177,10 @@ class NearClient:
                 if isinstance(entries, dict):
                     merged.update(entries)
             self._agents = merged
+            self._account_to_sim_id = {
+                str(entry["account_id"]): sim_id for sim_id, entry in merged.items()
+            }
         return self._agents
-
 
     def _note_tx(self, method: str, account_id: str, result: Any) -> None:
         tx_hash = getattr(result, "transaction_hash", None)
@@ -200,7 +203,7 @@ class NearClient:
         *,
         account_id: str | None = None,
         deposit_yocto: int = 0,
-        gas: str = GAS_100_TGAS,
+        gas: str = GAS_100,
     ) -> Any:
         signer_account = account_id or self.root_account_id
         client = self._client_for(signer_account)
@@ -300,7 +303,9 @@ class NearClient:
             account_id=self.account_for(business_sim_id),
         )
 
-    async def refund(self, proposal_id: str, caller_account_id: str | None = None) -> Any:
+    async def refund(
+        self, proposal_id: str, caller_account_id: str | None = None
+    ) -> Any:
         """Permissionless refund; the caller pays gas and escrow returns to the customer."""
         return await self._call(
             "refund",
@@ -309,26 +314,32 @@ class NearClient:
         )
 
     async def get_welfare(self) -> dict[str, Any]:
+        """Return the current on-chain welfare summary."""
         return await self._client.view(self.contract_id, "get_welfare")
 
     async def get_proposal(self, proposal_id: str) -> dict[str, Any] | None:
+        """Return the on-chain proposal record if present."""
         return await self._client.view(
             self.contract_id, "get_proposal", {"proposal_id": str(proposal_id)}
         )
 
     async def get_agent(self, account_id: str) -> dict[str, Any] | None:
+        """Return the on-chain agent profile if registered."""
         return await self._client.view(
             self.contract_id, "get_agent", {"agent_id": str(account_id)}
         )
 
     async def get_trade_count(self) -> int:
+        """Return the total number of settled trades."""
         return int(await self._client.view(self.contract_id, "get_trade_count"))
 
     async def block_timestamp_ns(self) -> int:
+        """Return the latest finalized block timestamp in nanoseconds."""
         block = await self._client.rpc("block", {"finality": "final"})
         return int(block["header"]["timestamp"])
 
     async def block_height(self) -> int:
+        """Return the latest finalized block height."""
         block = await self._client.rpc("block", {"finality": "final"})
         return int(block["header"]["height"])
 
@@ -355,34 +366,40 @@ class NearClient:
                 records.append(json.loads(line))
         return records
 
-    async def fetch_events(self) -> list[dict[str, Any]]:
-        """Fetch statuses for logged transactions and parse EVENT_JSON logs."""
-        records = []
-        for record in self.tx_records():
-            result = await self._client.transaction_status(
-                str(record["tx_hash"]),
-                sender_id=str(record["account"]),
-                wait_until="FINAL",
-            )
-            gas = 0
-            if result.transaction_outcome is not None:
-                gas += int(result.transaction_outcome.gas_burnt)
-            gas += sum(int(receipt.gas_burnt) for receipt in result.receipts_outcome)
+    async def fetch_events(self, *, concurrency: int = 4) -> list[dict[str, Any]]:
+        """Fetch statuses for logged transactions in parallel and parse EVENT_JSON logs."""
+        txs = self.tx_records()
+        if not txs:
+            return []
+        semaphore = asyncio.Semaphore(max(1, concurrency))
+        prefix = "EVENT_JSON:"
+        prefix_len = len(prefix)
+
+        async def fetch_one(record: dict[str, Any]) -> dict[str, Any]:
+            async with semaphore:
+                result = await self._client.transaction_status(
+                    str(record["tx_hash"]),
+                    sender_id=str(record["account"]),
+                    wait_until="FINAL",
+                )
+            gas = (
+                int(result.transaction_outcome.gas_burnt)
+                if result.transaction_outcome is not None
+                else 0
+            ) + sum(int(receipt.gas_burnt) for receipt in result.receipts_outcome)
             events = []
             for log in result.logs:
-                if not log.startswith("EVENT_JSON:"):
+                if not log.startswith(prefix):
                     continue
-                event = json.loads(log[len("EVENT_JSON:") :])
-                if event.get("standard") != EVENT_STD:
-                    continue
-                events.append(event)
-            records.append(
-                {
-                    "method": record["method"],
-                    "account": record["account"],
-                    "tx_hash": record["tx_hash"],
-                    "total_gas_burnt": gas,
-                    "events": events,
-                }
-            )
-        return records
+                event = json.loads(log[prefix_len:])
+                if event.get("standard") == EVENT_STD:
+                    events.append(event)
+            return {
+                "method": record["method"],
+                "account": record["account"],
+                "tx_hash": record["tx_hash"],
+                "total_gas_burnt": gas,
+                "events": events,
+            }
+
+        return list(await asyncio.gather(*(fetch_one(record) for record in txs)))

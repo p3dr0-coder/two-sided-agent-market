@@ -21,7 +21,9 @@ class NearAnalyticsFeed:
     async def load(self, welfare: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """Fetch tx statuses, read welfare, and assert the event-stream identity."""
         self.records = await self.client.fetch_events()
-        self.welfare = dict(welfare) if welfare is not None else await self.client.get_welfare()
+        self.welfare = (
+            dict(welfare) if welfare is not None else await self.client.get_welfare()
+        )
         self.assert_welfare(self.welfare)
         return self.welfare
 
@@ -39,14 +41,17 @@ class NearAnalyticsFeed:
 
     @property
     def trades(self) -> list[dict[str, Any]]:
+        """Return all settled trade event payloads."""
         return self._payloads("trade_settled")
 
     @property
     def posted(self) -> list[dict[str, Any]]:
+        """Return all posted proposal event payloads."""
         return self._payloads("proposal_posted")
 
     @property
     def rejected(self) -> list[dict[str, Any]]:
+        """Return all rejected proposal event payloads."""
         return self._payloads("proposal_rejected")
 
     def settle_gas_tgas(self) -> list[float]:
@@ -94,7 +99,7 @@ class NearAnalyticsFeed:
             )
 
     def headline(self, welfare: Mapping[str, Any] | None = None) -> str:
-        """The doc Step 12 sentence, populated only with measured values."""
+        """Format the measured Step 12 headline summary line."""
         measured = dict(welfare) if welfare is not None else self.welfare
         if measured is None:
             raise RuntimeError("call load() before headline()")

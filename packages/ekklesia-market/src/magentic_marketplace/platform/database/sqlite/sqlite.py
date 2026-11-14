@@ -248,7 +248,9 @@ class _BoundedSqliteConnectionMixIn:
             raise DatabaseTooBusyError() from e
 
         try:
-            async with aiosqlite.connect(self._db_path) as db:
+            async with aiosqlite.connect(self._db_path, timeout=self._timeout) as db:
+                await db.execute("PRAGMA synchronous=NORMAL")
+                await db.execute("PRAGMA busy_timeout=5000")
                 yield db
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
             if is_write:
@@ -1056,6 +1058,8 @@ class SQLiteDatabaseController(BaseDatabaseController, _BoundedSqliteConnectionM
     async def initialize(self):
         """Initialize the database tables."""
         async with self._get_connection(is_write=True) as db:
+            if self._db_path != ":memory:":
+                await db.execute("PRAGMA journal_mode=WAL")
             await db.executescript(CREATE_TABLES_SQL)
             await db.commit()
 
