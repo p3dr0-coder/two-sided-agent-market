@@ -9,18 +9,12 @@ sequenceDiagram
     accTitle: ekklesia runtime flow
     accDescr: Operator deploys the market, registers agents, runs scripted orders, then settles and reads welfare.
     autonumber
-    box rgba(230,247,235,0.12) Orchestrator
     participant U as Operator
     participant P as Python marketplace
-    end
-    box rgba(243,232,255,0.12) NEAR sandbox
     participant R as NEAR RPC
     participant B as Sandbox node
-    end
-    box rgba(226,238,255,0.12) Market code
     participant M as Market contract
     participant S as Search module
-    end
     rect rgba(226,238,255,0.20)
     Note over U,M: PHASE 1 — Deploy market
     U->>R: cargo near deploy, 193,807 B wasm
@@ -44,18 +38,10 @@ sequenceDiagram
     M-->>-P: Funded, proposal_accepted event
     end
     rect rgba(243,232,255,0.20)
-    Note over P: PHASE 4 — Poll events
-    loop polling_interval 0.5 s
-    P->>P: fetch_messages from the simulation database
-    end
-    end
-    rect rgba(255,232,232,0.20)
-    Note over P,S: PHASE 5 — Search and filter
+    Note over P,S: PHASE 4-6 — Poll, search, rank
+    P->>P: fetch_messages from the simulation database (0.5 s polling)
     P->>+S: execute_search, SearchAlgorithm.FILTERED or LEXICAL
     S->>S: _add_constraint_query on rating, amenities, menu items
-    end
-    rect rgba(224,247,250,0.20)
-    Note over P,S: PHASE 6 — Rank and match
     S->>S: lexical_rank, or is_subset plus rating sort
     S-->>-P: ranked businesses via paginate_search_response
     end
@@ -67,11 +53,6 @@ sequenceDiagram
     P->>+M: refund(proposal_id) from any caller
     M-->>-P: Refunded, escrow returns to the customer
     end
-    par fetch_events, Semaphore(4) in flight
-    P->>R: transaction_status for each logged tx
-    and
-    P->>R: transaction_status for each logged tx
-    end
     P->>+M: get_welfare(), then assert_welfare against TradeSettled
     M-->>-P: counters plus gas per settle
     end
@@ -81,7 +62,7 @@ sequenceDiagram
 
 Install Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https://docs.astral.sh/uv/), Binaryen `wasm-opt` >=116 (`scripts/wasm_opt.sh`). Run `uv sync --all-extras`, `source .venv/bin/activate`, `bash scripts/demo.sh`.
 
-`scripts/demo.sh` runs seven steps. It starts `nearprotocol/sandbox:2.13.4` on `127.0.0.1:3030`, builds `contracts/market` (`wasm32-unknown-unknown`), deploys `ekklesia.sandbox`, and calls `new({"fee_bps": 0})`. It registers `b1..b5.ekklesia.sandbox` and `c1..c20.ekklesia.sandbox`, keys in `.sandbox/agents.json` (`0600`). A deterministic no-LLM market writes `data/demo.db`, then it prints analytics and headline, and posts, escrows, expires, and refunds one proposal. Without Docker, run `near-sandbox --home DIR init` and `near-sandbox --home DIR run`. Export `NEAR_SANDBOX_URL`, `NEAR_ROOT_ACCOUNT`, `NEAR_ROOT_PRIVATE_KEY`, `MARKET_CONTRACT_ID` (e.g. `ekklesia.test.near`). `setup_local.sh` skips Docker for a native node. Peg: `1 NEAR = $1000` (`CENTS_PER_NEAR = 100_000`), so `1` cent is `1e19` yoctoNEAR. No LLM key or real fund is used.
+`scripts/demo.sh` runs seven steps: starts `nearprotocol/sandbox:2.13.4` on `127.0.0.1:3030`, builds `contracts/market` (`wasm32-unknown-unknown`), deploys `ekklesia.sandbox` with `new({"fee_bps": 0})`, registers `b1..b5.ekklesia.sandbox` and `c1..c20.ekklesia.sandbox` (keys in `.sandbox/agents.json`, `0600`), runs a deterministic no-LLM market writing `data/demo.db`, prints analytics and headline, and posts, escrows, expires, and refunds one proposal. Without Docker, run `near-sandbox --home DIR init` and `near-sandbox --home DIR run`, or `setup_local.sh` for a native node; export `NEAR_SANDBOX_URL`, `NEAR_ROOT_ACCOUNT`, `NEAR_ROOT_PRIVATE_KEY`, `MARKET_CONTRACT_ID` (e.g. `ekklesia.test.near`). Peg: `1 NEAR = $1000` (`CENTS_PER_NEAR = 100_000`), so `1` cent is `1e19` yoctoNEAR. No LLM key or real fund is used.
 
 ## Do X -> see Y
 
@@ -113,7 +94,7 @@ packages/ekklesia-market/src/magentic_marketplace/
 tests/sandbox_market.rs | scripts/fixtures.sh (data/demo_small)
 ```
 
-Settlement wraps `SimpleMarketplaceProtocol` and delegates each message to the simulation database. `register_agent(agent_name, profile, public_key)` creates `"{agent_name}.{contract}"` for 0.007 NEAR. Business key: `add_access_key_allowance(pk, Unlimited, contract, "post_proposal,settle")`. Customer key: `add_full_access_key(pk)` for escrow in `accept_proposal`. `profile.payout_account` needs FullAccess, so scoped sub-accounts are rejected.
+Settlement wraps `SimpleMarketplaceProtocol` and delegates each message to the simulation database. `register_agent(agent_name, profile, public_key)` creates `"{agent_name}.{contract}"` for 0.007 NEAR with a scoped business key (`post_proposal,settle`); the customer's FullAccess key funds escrow in `accept_proposal`. `profile.payout_account` needs FullAccess, so scoped sub-accounts are rejected.
 
 | Method | Caller | Behavior |
 |---|---|---|
