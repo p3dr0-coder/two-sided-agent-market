@@ -21,7 +21,7 @@ class DeterministicBusinessAgent(BaseSimpleMarketplaceAgent[BusinessAgentProfile
         self,
         business: Business,
         base_url: str,
-        near_client: NearClient,
+        near_client: NearClient | None = None,
         *,
         polling_interval: float = 0.5,
     ):
@@ -62,9 +62,7 @@ class DeterministicBusinessAgent(BaseSimpleMarketplaceAgent[BusinessAgentProfile
                 )
             )
             total += Decimal(str(unit_price))
-        proposal_id = (
-            f"{self.business.id}-{customer_id}-{self._proposal_counter}"
-        )
+        proposal_id = f"{self.business.id}-{customer_id}-{self._proposal_counter}"
         self._proposal_counter += 1
         message = OrderProposal(
             id=proposal_id,
@@ -82,6 +80,8 @@ class DeterministicBusinessAgent(BaseSimpleMarketplaceAgent[BusinessAgentProfile
         proposal_id = payment.proposal_message_id
         if proposal_id in self._settled:
             return
+        if self._near is None:
+            raise RuntimeError("near_client is required to settle")
         await self._near.settle(proposal_id, self.business.id)
         self._settled.add(proposal_id)
         self.logger.info(f"Settled proposal {proposal_id} for {customer_id}")
@@ -100,4 +100,3 @@ class DeterministicBusinessAgent(BaseSimpleMarketplaceAgent[BusinessAgentProfile
             await asyncio.sleep(0)
         else:
             await asyncio.sleep(self._polling_interval)
-

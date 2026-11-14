@@ -12,13 +12,14 @@ DEMO = ROOT / "data" / "demo_small"
 
 
 def demo_files() -> list[Path]:
-    """The 25 demo YAML files (5 businesses + 20 customers)."""
+    """Return the 25 demo YAML files (5 businesses + 20 customers)."""
     return sorted((DEMO / "businesses").glob("*.yaml")) + sorted(
         (DEMO / "customers").glob("*.yaml")
     )
 
 
-def test_twenty_five_demo_yaml_files() -> None:
+def test_demo_yaml_count() -> None:
+    """Verify every demo YAML price converts to exact cents."""
     files = demo_files()
     assert len(files) == 25
     priced = 0
@@ -32,7 +33,8 @@ def test_twenty_five_demo_yaml_files() -> None:
     assert priced > 25
 
 
-def test_float_bug_value_is_exact() -> None:
+def test_float_exact() -> None:
+    """Verify float rounding edge cases convert to exact cents."""
     assert to_cents(419.15) == 41_915
     # int(419.15 * 100) is platform-dependent (41914 or 41915); exactness is
     # why the adapter uses Decimal(str(value)) instead.
@@ -40,6 +42,7 @@ def test_float_bug_value_is_exact() -> None:
 
 
 def test_cents_reject() -> None:
+    """Verify fractional-cent values raise ValueError."""
     try:
         to_cents(419.155)
     except ValueError:
@@ -48,7 +51,8 @@ def test_cents_reject() -> None:
         raise AssertionError("non-integral cents must be rejected")
 
 
-def test_total_cents_uses_quantity() -> None:
+def test_total_qty() -> None:
+    """Verify total_cents multiplies unit_price by quantity."""
     items = [
         {"unit_price": 419.15, "quantity": 1},
         {"unit_price": "154.45", "quantity": 2},

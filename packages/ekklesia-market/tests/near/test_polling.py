@@ -19,7 +19,8 @@ async def _empty_messages() -> FetchMessagesResponse:
 
 
 @pytest.mark.asyncio
-async def test_business_polling_default_is_half_second(monkeypatch) -> None:
+async def test_biz_poll_default(monkeypatch) -> None:
+    """Verify business agents default to 0.5 s polling."""
     business = Business(
         id="b1",
         name="B",
@@ -43,7 +44,8 @@ async def test_business_polling_default_is_half_second(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_customer_polling_default_is_half_second(monkeypatch) -> None:
+async def test_cust_poll_default(monkeypatch) -> None:
+    """Verify customer agents default to 0.5 s polling."""
     customer = Customer(
         id="c1",
         name="C",

@@ -13,16 +13,14 @@ import time
 from .client import NearClient
 from .probes import business_menu, load_demo_agents, run_probe, single_item
 
-INVALID_ATTEMPTS = 3
+INVALID_N = 3
 
 
 async def probe(client: NearClient) -> int:
     """Run the manipulation probe and return the rejected-proposal count."""
     before = await client.get_welfare()
     baseline = int(before["rejected_proposals"])
-    customer, business, _customer_agent, business_agent = await load_demo_agents(
-        client
-    )
+    customer, business, _customer_agent, business_agent = await load_demo_agents(client)
     menu = business_menu(business_agent)
     item_name = next(iter(menu))
     menu_price = menu[item_name]
@@ -57,18 +55,16 @@ async def probe(client: NearClient) -> int:
 
     after = await client.get_welfare()
     rejected = int(after["rejected_proposals"]) - baseline
-    if rejected != INVALID_ATTEMPTS:
-        raise AssertionError(
-            f"expected {INVALID_ATTEMPTS} rejections, measured {rejected}"
-        )
+    if rejected != INVALID_N:
+        raise AssertionError(f"expected {INVALID_N} rejections, measured {rejected}")
     print(
-        f"manipulation probe OK: {INVALID_ATTEMPTS} invalid proposals, "
+        f"manipulation probe OK: {INVALID_N} invalid proposals, "
         f"{rejected} soft-rejected, 0 stored"
     )
     return int(after["rejected_proposals"])
 
 
-async def run_manipulation_probe(experiment_name: str | None = None) -> int:
+async def run_manip(experiment_name: str | None = None) -> int:
     """Run the manipulation probe with the shared client lifecycle."""
     return await run_probe(probe, experiment_name)
 
@@ -78,7 +74,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--experiment-name", default=None)
     args = parser.parse_args()
-    asyncio.run(run_manipulation_probe(args.experiment_name))
+    asyncio.run(run_manip(args.experiment_name))
 
 
 if __name__ == "__main__":

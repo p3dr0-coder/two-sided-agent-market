@@ -1,6 +1,6 @@
 """Messaging actions for the simple marketplace."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field
@@ -60,7 +60,7 @@ class FetchMessagesResponse(BaseModel):
     has_more: bool = Field(description="Whether there are more messages available")
 
 
-class SearchAlgorithm(str, Enum):
+class SearchAlgorithm(StrEnum):
     """Available search algorithms."""
 
     SIMPLE = "simple"

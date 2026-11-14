@@ -117,6 +117,7 @@ async def run_marketplace_experiment(
     near_client = None
     if near_settlement:
         from magentic_marketplace.near import NearClient, NearSettlementProtocol
+
         near_client = NearClient(
             agents_file=agents_file,
             experiment_name=experiment_name,
@@ -176,7 +177,8 @@ async def run_marketplace_experiment(
                     )
                     for customer_agent in customer_agents:
                         await customer_agent.run()
-                    await _wait_for_settlements(near_client, len(customer_agents))
+                    if near_client is not None:
+                        await _wait_for_settlements(near_client, len(customer_agents))
                 finally:
                     for business_agent in business_agents:
                         business_agent.shutdown()
@@ -197,7 +199,9 @@ async def run_marketplace_experiment(
                     for customer in customers
                 ]
 
-                async with AgentLauncher(marketplace_launcher.server_url) as agent_launcher:
+                async with AgentLauncher(
+                    marketplace_launcher.server_url
+                ) as agent_launcher:
                     try:
                         await agent_launcher.run_agents_with_dependencies(
                             primary_agents=customer_agents,
@@ -212,6 +216,5 @@ async def run_marketplace_experiment(
     print(
         "\nRun analytics with: near-ekklesia analyze "
         f"{sqlite_path if db_type == 'sqlite' else experiment_name} "
-        f"--db-type {db_type}"
-        + (" --near" if near_settlement else "")
+        f"--db-type {db_type}" + (" --near" if near_settlement else "")
     )

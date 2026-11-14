@@ -1,14 +1,13 @@
 """Lexical search implementation for the simple marketplace."""
 
 import logging
-import math
 
 from magentic_marketplace.platform.database.base import BaseDatabaseController
 from magentic_marketplace.platform.database.queries.agents import query as agent_query
 from magentic_marketplace.platform.database.queries.base import RangeQueryParams
 
 from ...actions import Search, SearchResponse
-from .utils import convert_agent_rows_to_businesses
+from .utils import convert_agent_rows_to_businesses, paginate_search_response
 
 logger = logging.getLogger(__name__)
 
@@ -40,19 +39,4 @@ async def execute_lexical_search(
 
         businesses = lexical_rank(search.query, businesses)
 
-    # Apply pagination and search limit
-    paginated_businesses = businesses
-    total_pages = 1
-
-    if search.limit and search.limit > 0:
-        start = (search.page - 1) * search.limit
-        end = start + search.limit
-        paginated_businesses = businesses[start:end]
-        total_pages = math.ceil(len(businesses) / search.limit)
-
-    return SearchResponse(
-        businesses=paginated_businesses,
-        search_algorithm=search.search_algorithm,
-        total_possible_results=len(businesses),
-        total_pages=total_pages,
-    )
+    return paginate_search_response(search, businesses)

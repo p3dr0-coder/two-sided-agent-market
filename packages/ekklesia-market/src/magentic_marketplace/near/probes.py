@@ -8,12 +8,14 @@ menus live here once.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, TypeVar
 
 from .client import NearClient
 
-DEMO_BUSINESS = "business_0001"
-DEMO_CUSTOMER = "customer_0001"
+T = TypeVar("T")
+
+DEMO_BIZ = "business_0001"
+DEMO_CUST = "customer_0001"
 
 
 def not_registered() -> RuntimeError:
@@ -35,20 +37,20 @@ async def load_demo_agents(
     client: NearClient,
 ) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
     """Fetch the demo customer and business profiles, or fail if unregistered."""
-    customer_agent = await client.get_agent(client.account_for(DEMO_CUSTOMER))
-    business_agent = await client.get_agent(client.account_for(DEMO_BUSINESS))
+    customer_agent = await client.get_agent(client.account_for(DEMO_CUST))
+    business_agent = await client.get_agent(client.account_for(DEMO_BIZ))
     if customer_agent is None or business_agent is None:
         raise not_registered()
-    return DEMO_CUSTOMER, DEMO_BUSINESS, customer_agent, business_agent
+    return DEMO_CUST, DEMO_BIZ, customer_agent, business_agent
 
 
 async def run_probe(
-    probe: Callable[[NearClient], Awaitable[None]],
+    probe: Callable[[NearClient], Awaitable[T]],
     experiment_name: str | None = None,
-) -> None:
+) -> T:
     """Run ``probe`` against a fresh client and always close the client."""
     client = NearClient(experiment_name=experiment_name)
     try:
-        await probe(client)
+        return await probe(client)
     finally:
         await client.close()

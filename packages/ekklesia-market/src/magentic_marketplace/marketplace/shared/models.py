@@ -55,27 +55,22 @@ class Business(BaseModel):
             str: The formatted business metadata.
 
         """
-        if index_name:
-            formatted_business = (self.name).strip() + ", "
+        parts = [self.name.strip()] if index_name else []
+        parts.append(self.description.strip())
+        if index_menu_prices:
+            parts.extend(
+                f"({item_name.strip()}: {item_price})"
+                for item_name, item_price in self.menu_features.items()
+            )
         else:
-            formatted_business = ""
-
-        formatted_business += self.description.strip() + ", "
-
-        # Add in menu item descriptors
-        for item_name, item_price in self.menu_features.items():
-            if index_menu_prices:
-                formatted_business += f"({item_name.strip()}: {item_price}), "
-            else:
-                formatted_business += f"{item_name.strip()}, "
-
+            parts.extend(item_name.strip() for item_name in self.menu_features)
         if index_amenities:
-            # Add in amenities
-            for feature, value in self.amenity_features.items():
-                if value:
-                    formatted_business += f"{feature.strip()}, "
-
-        return formatted_business
+            parts.extend(
+                feature.strip()
+                for feature, value in self.amenity_features.items()
+                if value
+            )
+        return ", ".join(parts) + ", "
 
 
 MarketplaceParticipantType = Annotated[Customer | Business, Field(discriminator="type")]

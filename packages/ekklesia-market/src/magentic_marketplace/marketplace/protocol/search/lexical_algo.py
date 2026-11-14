@@ -8,6 +8,17 @@ import re
 
 from ...shared.models import BusinessAgentProfile
 
+_NON_WORD_RE = re.compile(r"[^\w\s]")
+_WS_RE = re.compile(r"\s+")
+
+
+def _shingles(text: str, k: int = 4) -> set[str]:
+    normalized = _WS_RE.sub(" ", _NON_WORD_RE.sub("", text.lower())).strip()
+    padded = f" {normalized} "
+    if len(padded) < k:
+        padded += " " * (k - len(padded))
+    return {padded[i : i + k] for i in range(len(padded) - k + 1)}
+
 
 def shingle_overlap_score(
     query: str, doc: str, k: int = 4, normalize_length: bool = True
@@ -24,32 +35,11 @@ def shingle_overlap_score(
         float: The shingle overlap score between the two strings.
 
     """
-
-    def normalize_text(s: str) -> str:
-        # Lowercase and remove non-alphanumeric characters
-        s = s.lower()
-        s = re.sub(r"[^\w\s]", "", s)
-        s = re.sub(r"\s+", " ", s).strip()
-        return s
-
-    def get_shingles(s: str, k: int) -> set[str]:
-        if len(s) < k:
-            s = s + " " * (k - len(s))
-        return {s[i : i + k] for i in range(len(s) - k + 1)}
-
-    shingles_query = get_shingles(" " + normalize_text(query) + " ", k)
-    shingles_doc = get_shingles(" " + normalize_text(doc) + " ", k)
-
-    intersection = shingles_query.intersection(shingles_doc)
-
+    shingles_query = _shingles(query, k)
+    overlap = len(shingles_query & _shingles(doc, k))
     if normalize_length:
-        if len(shingles_query) == 0:
-            return 0.0
-        return len(intersection) / len(
-            shingles_query
-        )  # How much of the query is covered by the doc
-    else:
-        return len(intersection)
+        return overlap / len(shingles_query) if shingles_query else 0.0
+    return overlap
 
 
 def lexical_rank(
@@ -72,31 +62,22 @@ def lexical_rank(
         Ranked list of business agent profiles
 
     """
-    # Create a dictionary for quick lookup of results by agent id
-    results_dict: dict[str, BusinessAgentProfile] = {}
-    for business in businesses:
-        results_dict[business.id] = business
-
-    # Compute shingle overlap scores
-    shingle_score_tuples: list[tuple[str, float]] = []
-    for business in businesses:
-        searchable_text = business.business.get_searchable_text(
-            index_name=index_name,
-            index_menu_prices=index_menu_prices,
-            index_amenities=index_amenities,
+    query_shingles = _shingles(query)
+    scored = [
+        (
+            len(
+                query_shingles
+                & _shingles(
+                    business.business.get_searchable_text(
+                        index_name=index_name,
+                        index_menu_prices=index_menu_prices,
+                        index_amenities=index_amenities,
+                    )
+                )
+            ),
+            business,
         )
-        shingle_score = shingle_overlap_score(query, searchable_text)
-        shingle_score_tuples.append((business.id, shingle_score))
-
-    # Sort by shingle score (descending)
-    shingle_score_tuples = sorted(
-        shingle_score_tuples, key=lambda x: x[1], reverse=True
-    )
-
-    # Return the search results in ranked order
-    ranked_results: list[BusinessAgentProfile] = []
-    for business_id, _ in shingle_score_tuples:
-        result = results_dict[business_id]
-        ranked_results.append(result)
-
-    return ranked_results
+        for business in businesses
+    ]
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return [business for _, business in scored]

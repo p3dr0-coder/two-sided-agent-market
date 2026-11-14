@@ -14,6 +14,12 @@ from magentic_marketplace.marketplace.actions import (
 )
 from magentic_marketplace.marketplace.protocol.protocol import SimpleMarketplaceProtocol
 from magentic_marketplace.near.adapter import NearSettlementProtocol
+from magentic_marketplace.platform.database.base import (
+    ActionTableController,
+    AgentTableController,
+    BaseDatabaseController,
+    LogTableController,
+)
 from magentic_marketplace.platform.shared.models import (
     ActionExecutionRequest,
     ActionExecutionResult,
@@ -21,23 +27,58 @@ from magentic_marketplace.platform.shared.models import (
 )
 
 
+class DummyDB(BaseDatabaseController):
+    """Typed stub database controller for protocol-routing unit tests."""
+
+    @property
+    def agents(self) -> AgentTableController:
+        """Unused agents controller."""
+        raise NotImplementedError
+
+    @property
+    def actions(self) -> ActionTableController:
+        """Unused actions controller."""
+        raise NotImplementedError
+
+    @property
+    def logs(self) -> LogTableController:
+        """Unused logs controller."""
+        raise NotImplementedError
+
+    @property
+    def row_index_column(self) -> str:
+        """Unused row index column."""
+        return "id"
+
+    async def execute(self, command):
+        """Unused raw SQL executor."""
+        raise NotImplementedError
+
+
 class FakeNear:
     """Record settlement calls without a network."""
 
     def __init__(self):
+        """Initialize an empty call recorder."""
         self.calls: list[tuple] = []
 
     async def block_timestamp_ns(self) -> int:
+        """Return a fixed timestamp in nanoseconds."""
         return 1_000_000_000
 
     async def post_proposal(self, **kwargs):
+        """Record a post_proposal call."""
         self.calls.append(("post_proposal", kwargs))
 
     async def accept_proposal(self, **kwargs):
+        """Record an accept_proposal call."""
         self.calls.append(("accept_proposal", kwargs))
 
 
-def send_message(message, *, from_agent_id="business_0001", to_agent_id="customer_0001") -> SendMessage:
+def send_message(
+    message, *, from_agent_id="business_0001", to_agent_id="customer_0001"
+) -> SendMessage:
+    """Build a SendMessage action for tests."""
     return SendMessage(
         from_agent_id=from_agent_id,
         to_agent_id=to_agent_id,
@@ -46,7 +87,8 @@ def send_message(message, *, from_agent_id="business_0001", to_agent_id="custome
     )
 
 
-async def test_order_proposal_and_payment_route_then_delegate():
+async def test_route_and_delegate():
+    """Verify proposals and payments route on-chain and delegate."""
     near = FakeNear()
     protocol = NearSettlementProtocol(near)  # type: ignore[arg-type]
     delegated: list[ActionExecutionRequest] = []
@@ -73,9 +115,10 @@ async def test_order_proposal_and_payment_route_then_delegate():
         result = await protocol.execute_action(
             agent=AgentProfile(id="business_0001"),
             action=ActionExecutionRequest(
-                name="SendMessage", parameters=send_message(proposal).model_dump(mode="json")
+                name="SendMessage",
+                parameters=send_message(proposal).model_dump(mode="json"),
             ),
-            database=object(),
+            database=DummyDB(),
         )
         assert result.content == {"recorded": True}
         await protocol.execute_action(
@@ -88,7 +131,7 @@ async def test_order_proposal_and_payment_route_then_delegate():
                     to_agent_id="business_0001",
                 ).model_dump(mode="json"),
             ),
-            database=object(),
+            database=DummyDB(),
         )
 
     assert near.calls[0][0] == "post_proposal"
@@ -102,7 +145,8 @@ async def test_order_proposal_and_payment_route_then_delegate():
     assert len(delegated) == 2
 
 
-async def test_text_message_is_untouched():
+async def test_text_untouched():
+    """Verify plain text messages do not trigger settlement calls."""
     near = FakeNear()
     protocol = NearSettlementProtocol(near)  # type: ignore[arg-type]
     delegated: list[ActionExecutionRequest] = []
@@ -120,14 +164,16 @@ async def test_text_message_is_untouched():
                     mode="json"
                 ),
             ),
-            database=object(),
+            database=DummyDB(),
         )
 
     assert near.calls == []
     assert len(delegated) == 1
 
 
-async def test_routing_error_is_raised_after_delegation():
+async def test_error_after_delegate():
+    """Verify routing errors still delegate to the protocol before raising."""
+
     class BrokenNear(FakeNear):
         async def post_proposal(self, **kwargs):
             raise RuntimeError("chain rejected")
@@ -159,6 +205,6 @@ async def test_routing_error_is_raised_after_delegation():
                     name="SendMessage",
                     parameters=send_message(proposal).model_dump(mode="json"),
                 ),
-                database=object(),
+                database=DummyDB(),
             )
     assert len(delegated) == 1

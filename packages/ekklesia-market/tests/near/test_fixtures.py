@@ -9,6 +9,7 @@ DEMO = ROOT / "data" / "demo_small"
 
 
 def load(kind: str) -> list[dict]:
+    """Load all sorted demo YAML documents for a participant kind."""
     return [
         yaml.safe_load(path.read_text(encoding="utf-8"))
         for path in sorted((DEMO / kind).glob("*.yaml"))
@@ -16,6 +17,7 @@ def load(kind: str) -> list[dict]:
 
 
 def test_counts_and_ids() -> None:
+    """Verify demo fixture business/customer counts and IDs."""
     businesses = load("businesses")
     customers = load("customers")
     assert len(businesses) == 5
@@ -30,6 +32,7 @@ def test_counts_and_ids() -> None:
 
 
 def test_menu_union() -> None:
+    """Verify every customer menu item exists in the business menu union."""
     businesses = load("businesses")
     union = set()
     for business in businesses:
@@ -39,6 +42,7 @@ def test_menu_union() -> None:
 
 
 def test_customer_group() -> None:
+    """Verify each customer group matches its base business."""
     businesses = load("businesses")
     customers = load("customers")
     for index, customer in enumerate(customers):
@@ -50,6 +54,7 @@ def test_customer_group() -> None:
 
 
 def test_customer_replicates() -> None:
+    """Verify replicate customers share request, menu, and amenities."""
     customers = load("customers")
     for group in range(5):
         base = customers[group * 4]

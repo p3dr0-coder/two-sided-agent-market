@@ -1,10 +1,10 @@
 """The scripted customer's menu/amenity/price policy matches the origin rules."""
 
+from magentic_marketplace.marketplace.actions import OrderItem, OrderProposal
 from magentic_marketplace.marketplace.agents.scripted_customer import (
     proposal_meets_policy,
     rank_businesses,
 )
-from magentic_marketplace.marketplace.actions import OrderItem, OrderProposal
 from magentic_marketplace.marketplace.shared.models import (
     Business,
     BusinessAgentProfile,
@@ -13,6 +13,7 @@ from magentic_marketplace.marketplace.shared.models import (
 
 
 def business(identifier: str, prices: dict[str, float], amenities: dict[str, bool]):
+    """Create a BusinessAgentProfile fixture."""
     return BusinessAgentProfile.from_business(
         Business(
             id=identifier,
@@ -28,6 +29,7 @@ def business(identifier: str, prices: dict[str, float], amenities: dict[str, boo
 
 
 def test_rank_predicate():
+    """Verify businesses are ranked by exact cent total after filter checks."""
     customer = Customer(
         id="customer_0001",
         name="Grace Wang",
@@ -62,6 +64,7 @@ def test_rank_predicate():
 
 
 def test_proposal_cap():
+    """Verify proposal acceptance enforces the origin price cap."""
     customer = Customer(
         id="customer_0001",
         name="Grace Wang",
@@ -69,9 +72,7 @@ def test_proposal_cap():
         menu_features={"Door Lock Replacement": 168.99},
         amenity_features=[],
     )
-    seller = business(
-        "business_0001", {"Door Lock Replacement": 154.45}, {}
-    ).business
+    seller = business("business_0001", {"Door Lock Replacement": 154.45}, {}).business
     at_cap = OrderProposal(
         id="p1",
         items=[

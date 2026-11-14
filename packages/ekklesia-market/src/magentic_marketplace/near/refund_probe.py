@@ -51,7 +51,7 @@ async def probe(client: NearClient) -> None:
     print(f"refund probe OK: {proposal_id} -> Refunded; escrow returned")
 
 
-async def run_refund_probe(experiment_name: str | None = None) -> None:
+async def run_refund(experiment_name: str | None = None) -> None:
     """Run the refund probe with the shared client lifecycle."""
     await run_probe(probe, experiment_name)
 
@@ -61,7 +61,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--experiment-name", default=None)
     args = parser.parse_args()
-    asyncio.run(run_refund_probe(args.experiment_name))
+    asyncio.run(run_refund(args.experiment_name))
 
 
 if __name__ == "__main__":

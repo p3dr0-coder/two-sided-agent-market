@@ -209,9 +209,18 @@ class AnthropicClient(ProviderClient[AnthropicConfig]):
             elif role in ("user", "assistant"):
                 # Handle different content formats
                 if isinstance(content, str):
-                    anthropic_messages.append(
-                        anthropic.types.MessageParam(role=role, content=content)
-                    )
+                    if role == "user":
+                        anthropic_messages.append(
+                            anthropic.types.UserMessageParam(
+                                role="user", content=content
+                            )
+                        )
+                    else:
+                        anthropic_messages.append(
+                            anthropic.types.AssistantMessageParam(
+                                role="assistant", content=content
+                            )
+                        )
                 elif isinstance(content, list):
                     # Handle multi-part content (text only for now)
                     text_content: list[str] = []
@@ -221,12 +230,19 @@ class AnthropicClient(ProviderClient[AnthropicConfig]):
                             text_content.append(text)
 
                     if text_content:
-                        anthropic_messages.append(
-                            anthropic.types.MessageParam(
-                                role=role,
-                                content="\n".join(text_content),
+                        joined = "\n".join(text_content)
+                        if role == "user":
+                            anthropic_messages.append(
+                                anthropic.types.UserMessageParam(
+                                    role="user", content=joined
+                                )
                             )
-                        )
+                        else:
+                            anthropic_messages.append(
+                                anthropic.types.AssistantMessageParam(
+                                    role="assistant", content=joined
+                                )
+                            )
 
         # Concatenate system messages or return None
         system_prompt = "\n\n".join(system_messages) if system_messages else None
@@ -300,13 +316,13 @@ class AnthropicClient(ProviderClient[AnthropicConfig]):
                                     list[anthropic.types.MessageParam], args["messages"]
                                 )
                                 current_messages.append(
-                                    anthropic.types.MessageParam(
+                                    anthropic.types.AssistantMessageParam(
                                         role="assistant",
-                                        content=response.content,
+                                        content=cast(Any, response.content),
                                     )
                                 )
                                 current_messages.append(
-                                    anthropic.types.MessageParam(
+                                    anthropic.types.UserMessageParam(
                                         role="user",
                                         content=error_message,
                                     )
@@ -326,13 +342,13 @@ class AnthropicClient(ProviderClient[AnthropicConfig]):
                             list[anthropic.types.MessageParam], args["messages"]
                         )
                         current_messages.append(
-                            anthropic.types.MessageParam(
+                            anthropic.types.AssistantMessageParam(
                                 role="assistant",
-                                content=response.content,
+                                content=cast(Any, response.content),
                             )
                         )
                         current_messages.append(
-                            anthropic.types.MessageParam(
+                            anthropic.types.UserMessageParam(
                                 role="user",
                                 content="Please use the required tool to format your response.",
                             )
@@ -351,7 +367,7 @@ class AnthropicClient(ProviderClient[AnthropicConfig]):
                         list[anthropic.types.MessageParam], args["messages"]
                     )
                     current_messages.append(
-                        anthropic.types.MessageParam(
+                        anthropic.types.UserMessageParam(
                             role="user",
                             content=error_message,
                         )

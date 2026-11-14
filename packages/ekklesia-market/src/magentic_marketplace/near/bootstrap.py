@@ -278,8 +278,7 @@ async def bootstrap(args: argparse.Namespace) -> None:
         funding.extend(
             fund(
                 entry["account_id"],
-                int(entry["profile"]["requested_total_cents"])
-                * YOCTO_PER_USD_CENT
+                int(entry["profile"]["requested_total_cents"]) * YOCTO_PER_USD_CENT
                 + GAS_FUND,
             )
             for entry in document["customers"].values()

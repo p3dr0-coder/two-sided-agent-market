@@ -11,17 +11,14 @@ from magentic_marketplace.marketplace.actions import (
     OrderProposal,
     ReceivedMessage,
 )
-from magentic_marketplace.marketplace.agents.scripted_customer import (
-    DeterministicCustomerAgent,
-)
 from magentic_marketplace.marketplace.agents.scripted_business import (
     DeterministicBusinessAgent,
 )
-from magentic_marketplace.marketplace.shared.models import Business, Customer
-from magentic_marketplace.platform.shared.models import (
-    ActionExecutionRequest,
-    ActionExecutionResult,
+from magentic_marketplace.marketplace.agents.scripted_customer import (
+    DeterministicCustomerAgent,
 )
+from magentic_marketplace.marketplace.shared.models import Business, Customer
+from magentic_marketplace.platform.shared.models import ActionExecutionResult
 
 
 def _sent(from_id: str, to_id: str, index: int) -> ReceivedMessage:
@@ -50,25 +47,23 @@ class RecordingExecutor:
     """Serve queued fetch pages and record the requested after_index."""
 
     def __init__(self, pages: list[list[ReceivedMessage]]):
+        """Initialize the recording executor with queued pages."""
         self.pages = pages
         self.turn = 0
         self.after_indexes: list[int | None] = []
         self.requests: list[FetchMessages] = []
 
     async def __call__(self, action: FetchMessages):
+        """Return the next queued FetchMessagesResponse."""
         self.requests.append(action)
         if isinstance(action, FetchMessages):
             self.after_indexes.append(action.after_index)
-            page = (
-                self.pages[self.turn]
-                if self.turn < len(self.pages)
-                else []
-            )
+            page = self.pages[self.turn] if self.turn < len(self.pages) else []
             self.turn += 1
             return ActionExecutionResult(
-                content=FetchMessagesResponse(
-                    messages=page, has_more=False
-                ).model_dump(mode="json")
+                content=FetchMessagesResponse(messages=page, has_more=False).model_dump(
+                    mode="json"
+                )
             )
         raise AssertionError(f"unexpected action {action.get_name()}")
 
@@ -103,10 +98,9 @@ def _business_agent(executor: RecordingExecutor) -> DeterministicBusinessAgent:
 
 
 @pytest.mark.asyncio
-async def test_business_fetch_resumes_after_last_index():
-    executor = RecordingExecutor(
-        [[_sent("c1", "b1", 7), _sent("c1", "b1", 9)], []]
-    )
+async def test_biz_fetch_resume():
+    """Verify business fetch polling resumes after the highest seen index."""
+    executor = RecordingExecutor([[_sent("c1", "b1", 7), _sent("c1", "b1", 9)], []])
     agent = _business_agent(executor)
 
     first = await agent.fetch_messages()
@@ -120,7 +114,7 @@ async def test_business_fetch_resumes_after_last_index():
 
 
 @pytest.mark.asyncio
-async def test_customer_fetch_never_rescans_seen_rows():
+async def test_cust_fetch_resume():
     """The second poll asks the database only for rows after the last seen index."""
     executor = RecordingExecutor(
         [[_sent("b1", "c1", 3), _sent("b1", "c1", 4)], [_sent("b1", "c1", 11)]]
@@ -138,7 +132,7 @@ async def test_customer_fetch_never_rescans_seen_rows():
 
 
 @pytest.mark.asyncio
-async def test_fetch_messages_action_carries_resume_index():
+async def test_fetch_carries_index():
     """The built action object carries the resume index for the server side."""
     executor = RecordingExecutor([[]])
     agent = _business_agent(executor)

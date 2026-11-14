@@ -77,5 +77,3 @@ class NearSettlementProtocol(SimpleMarketplaceProtocol):
         if route_error is not None:
             raise route_error
         return result
-
-

@@ -34,14 +34,14 @@ def menu_total_cents(customer: Customer, business: Business) -> int | None:
     """Exact menu total if the business covers every requested item."""
     if not set(customer.menu_features).issubset(business.menu_features):
         return None
-    return sum(to_cents(business.menu_features[name]) for name in customer.menu_features)
+    return sum(
+        to_cents(business.menu_features[name]) for name in customer.menu_features
+    )
 
 
 def offers_required_amenities(customer: Customer, business: Business) -> bool:
-    """The origin's ``required_amenities.issubset(available_amenities)``."""
-    available = {
-        name for name, offered in business.amenity_features.items() if offered
-    }
+    """Return whether the business offers all required customer amenities."""
+    available = {name for name, offered in business.amenity_features.items() if offered}
     return set(customer.amenity_features).issubset(available)
 
 
@@ -151,9 +151,7 @@ class DeterministicCustomerAgent(BaseSimpleMarketplaceAgent[CustomerAgentProfile
             )
             if profile is None:
                 continue
-            if not proposal_meets_policy(
-                self.customer, profile.business, proposal
-            ):
+            if not proposal_meets_policy(self.customer, profile.business, proposal):
                 self.logger.warning(
                     f"Rejected proposal {proposal.id} from {received.from_agent_id}"
                 )

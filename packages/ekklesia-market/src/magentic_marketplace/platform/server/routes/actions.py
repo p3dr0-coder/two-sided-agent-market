@@ -52,7 +52,9 @@ async def execute_action(
         # Execute action with name, parameters, and agent object
         # Use the database agent object with the correct ID
         agent_with_id = authenticated_agent.data.model_copy()
-        agent_with_id.id = authenticated_agent.id  # The authenticated agent id is authoritative.
+        agent_with_id.id = (
+            authenticated_agent.id
+        )  # The authenticated agent id is authoritative.
 
         result = await protocol.execute_action(
             agent=agent_with_id,

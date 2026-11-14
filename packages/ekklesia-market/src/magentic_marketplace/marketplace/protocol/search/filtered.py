@@ -1,7 +1,5 @@
 """Filtered search implementation for the simple marketplace."""
 
-import math
-
 from magentic_marketplace.platform.database.base import BaseDatabaseController
 from magentic_marketplace.platform.database.queries.agents import (
     query as agent_query,
@@ -13,7 +11,7 @@ from magentic_marketplace.platform.database.queries.base import (
 
 from ...actions import Search, SearchResponse
 from ...shared.models import SearchConstraints
-from .utils import convert_agent_rows_to_businesses
+from .utils import convert_agent_rows_to_businesses, paginate_search_response
 
 
 async def execute_filtered_search(
@@ -46,23 +44,7 @@ async def execute_filtered_search(
     # Convert and sort results
     businesses = await convert_agent_rows_to_businesses(agent_rows)
     businesses.sort(key=lambda b: b.business.rating, reverse=True)
-
-    total_possible_results = len(businesses)
-    paginated_businesses = businesses
-    total_pages = 1
-
-    if search.limit and search.limit > 0:
-        start = (search.page - 1) * search.limit
-        end = start + search.limit
-        paginated_businesses = businesses[start:end]
-        total_pages = math.ceil(total_possible_results / search.limit)
-
-    return SearchResponse(
-        businesses=paginated_businesses,
-        search_algorithm=search.search_algorithm,
-        total_possible_results=total_possible_results,
-        total_pages=total_pages,
-    )
+    return paginate_search_response(search, businesses)
 
 
 def _add_constraint_query(input_query: Query, constraints: SearchConstraints) -> Query:

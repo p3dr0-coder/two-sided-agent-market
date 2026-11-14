@@ -57,6 +57,7 @@ async def execute_search(
     else:
         raise ValueError(f"Unknown search algorithm: {search.search_algorithm}")
 
-    logger.debug(f"SearchResponse: {response.model_dump_json(indent=2)}")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"SearchResponse: {response.model_dump_json(indent=2)}")
 
     return ActionExecutionResult(content=response.model_dump(mode="json"))
