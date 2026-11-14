@@ -34,19 +34,19 @@ from near import (
 from near.testing import sandbox_signer
 
 from .client import (
-    AGENT_REGISTRATION_DEPOSIT_YOCTO,
-    BUSINESS_REGISTRATION_DEPOSIT_YOCTO,
+    AGENT_DEPOSIT,
+    BIZ_DEPOSIT,
     YOCTO_PER_USD_CENT,
     NearClient,
     to_cents,
 )
 
 ROOT = Path(__file__).resolve().parents[5]
-GAS_FUND_YOCTO = 500_000_000_000_000_000_000_000  # 0.5 NEAR
-CONTRACT_FUNDING_YOCTO = 10_000_000_000_000_000_000_000_000  # 10 NEAR
+GAS_FUND = 500_000_000_000_000_000_000_000  # 0.5 NEAR
+CONTRACT_FUND = 10_000_000_000_000_000_000_000_000  # 10 NEAR
 
-REGISTRATION_CONCURRENCY = 8
-FUNDING_CONCURRENCY = 8
+REG_LIMIT = 8
+FUND_LIMIT = 8
 
 
 def _root_signer(network: str) -> KeyPairSigner:
@@ -163,7 +163,7 @@ async def bootstrap(args: argparse.Namespace) -> None:
                     contract_id,
                     actions=[
                         create_account(),
-                        transfer(Amount(CONTRACT_FUNDING_YOCTO)),
+                        transfer(Amount(CONTRACT_FUND)),
                         add_full_access_key(root_signer.public_key),
                         deploy_contract(wasm.read_bytes()),
                     ],
@@ -216,66 +216,55 @@ async def bootstrap(args: argparse.Namespace) -> None:
 
             return await asyncio.gather(*(run(coro) for coro in coros))
 
-        async def register_business(
-            index: int, business: dict[str, Any]
+        async def register_one(
+            agent_name: str,
+            doc: dict[str, Any],
+            role: str,
+            deposit_yocto: int,
+            profile: dict[str, Any],
         ) -> tuple[str, dict[str, Any]]:
-            agent_name = f"b{index}"
+            """Register one sub-account and build its agents.json entry."""
             key = generate_key()
-            profile = _business_profile(business, payout_account)
             account_id = await client.register_agent(
-                agent_name,
-                profile,
-                str(key.public_key),
-                deposit_yocto=BUSINESS_REGISTRATION_DEPOSIT_YOCTO,
+                agent_name, profile, str(key.public_key), deposit_yocto=deposit_yocto
             )
-            sim_id = str(business["id"])
+            sim_id = str(doc["id"])
             return sim_id, {
                 "sim_id": sim_id,
                 "account_id": account_id,
                 "secret_key": str(key.secret_key),
                 "public_key": str(key.public_key),
-                "role": "Business",
-                "profile": profile,
-            }
-
-        async def register_customer(
-            index: int, customer: dict[str, Any]
-        ) -> tuple[str, dict[str, Any]]:
-            agent_name = f"c{index}"
-            key = generate_key()
-            account_id = client.account_for_name(agent_name)
-            profile = _customer_profile(customer, account_id)
-            account_id = await client.register_agent(
-                agent_name,
-                profile,
-                str(key.public_key),
-                deposit_yocto=AGENT_REGISTRATION_DEPOSIT_YOCTO,
-            )
-            sim_id = str(customer["id"])
-            return sim_id, {
-                "sim_id": sim_id,
-                "account_id": account_id,
-                "secret_key": str(key.secret_key),
-                "public_key": str(key.public_key),
-                "role": "Customer",
+                "role": role,
                 "profile": profile,
             }
 
         business_entries = await bounded(
             [
-                register_business(index, business)
+                register_one(
+                    f"b{index}",
+                    business,
+                    "Business",
+                    BIZ_DEPOSIT,
+                    _business_profile(business, payout_account),
+                )
                 for index, business in enumerate(businesses, start=1)
             ],
-            REGISTRATION_CONCURRENCY,
+            REG_LIMIT,
         )
         document["businesses"].update(business_entries)
 
         customer_entries = await bounded(
             [
-                register_customer(index, customer)
+                register_one(
+                    f"c{index}",
+                    customer,
+                    "Customer",
+                    AGENT_DEPOSIT,
+                    _customer_profile(customer, client.account_for_name(f"c{index}")),
+                )
                 for index, customer in enumerate(customers, start=1)
             ],
-            REGISTRATION_CONCURRENCY,
+            REG_LIMIT,
         )
         document["customers"].update(customer_entries)
 
@@ -283,7 +272,7 @@ async def bootstrap(args: argparse.Namespace) -> None:
             await root.send(account_id, Amount(amount), wait_until="FINAL")
 
         funding = [
-            fund(entry["account_id"], GAS_FUND_YOCTO)
+            fund(entry["account_id"], GAS_FUND)
             for entry in document["businesses"].values()
         ]
         funding.extend(
@@ -291,11 +280,11 @@ async def bootstrap(args: argparse.Namespace) -> None:
                 entry["account_id"],
                 int(entry["profile"]["requested_total_cents"])
                 * YOCTO_PER_USD_CENT
-                + GAS_FUND_YOCTO,
+                + GAS_FUND,
             )
             for entry in document["customers"].values()
         )
-        await bounded(funding, FUNDING_CONCURRENCY)
+        await bounded(funding, FUND_LIMIT)
 
         agents_path = Path(args.agents_file)
         agents_path.parent.mkdir(parents=True, exist_ok=True)

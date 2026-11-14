@@ -7,7 +7,7 @@ dev = [
     "pytest-asyncio>=1.2.0",
     "ruff>=0.13.0",
 ]
-plots = ["matplotlib>=3.10.7", "pandas>=2.3.3"]
+plots = ["matplotlib>=3.11.2", "pandas>=3.1.1"]
 
 [tool.uv.workspace]
 members = ["packages/ekklesia-market"]

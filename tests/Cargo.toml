@@ -9,7 +9,7 @@ publish = false
 near-workspaces = { version = "0.24.0", features = ["unstable"] }
 near-sandbox = "=0.4.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-near-sdk = { version = "5.30.1", features = ["unit-testing"] }
+near-sdk = { version = "5.30.2", features = ["unit-testing"] }
 
 [[test]]
 name = "sandbox_market"

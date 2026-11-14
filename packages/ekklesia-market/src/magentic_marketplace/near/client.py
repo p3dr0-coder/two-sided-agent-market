@@ -22,11 +22,11 @@ from near import Amount, AsyncNear, KeyPairSigner, parse_key
 YOCTO_PER_NEAR = 10**24
 CENTS_PER_NEAR = 100_000
 YOCTO_PER_USD_CENT = YOCTO_PER_NEAR // CENTS_PER_NEAR
-PROPOSAL_TTL_NS = 300_000_000_000
-AGENT_REGISTRATION_DEPOSIT_YOCTO = 100_000_000_000_000_000_000_000  # 0.1 NEAR
-BUSINESS_REGISTRATION_DEPOSIT_YOCTO = 500_000_000_000_000_000_000_000  # 0.5 NEAR
+TTL_NS = 300_000_000_000
+AGENT_DEPOSIT = 100_000_000_000_000_000_000_000  # 0.1 NEAR
+BIZ_DEPOSIT = 500_000_000_000_000_000_000_000  # 0.5 NEAR
 GAS_100_TGAS = "100 Tgas"
-EVENT_STANDARD = "ekklesia-market"
+EVENT_STD = "ekklesia-market"
 
 
 def to_cents(value: Any) -> int:
@@ -66,7 +66,7 @@ def expiry_ns(value: Any, block_timestamp_ns: int) -> int:
     treated as UTC because the origin emits timezone-aware ISO strings.
     """
     if value is None or value == "":
-        return block_timestamp_ns + PROPOSAL_TTL_NS
+        return block_timestamp_ns + TTL_NS
     parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=UTC)
@@ -214,17 +214,13 @@ class NearClient:
         self._note_tx(method, signer_account, result)
         return result
 
-    # ------------------------------------------------------------------
-    # Writes
-    # ------------------------------------------------------------------
-
     async def register_agent(
         self,
         agent_name: str,
         profile: Mapping[str, Any],
         public_key: str,
         *,
-        deposit_yocto: int = AGENT_REGISTRATION_DEPOSIT_YOCTO,
+        deposit_yocto: int = AGENT_DEPOSIT,
         account_id: str | None = None,
     ) -> str:
         """Create and register a sub-account; return the full account id."""
@@ -312,10 +308,6 @@ class NearClient:
             account_id=caller_account_id,
         )
 
-    # ------------------------------------------------------------------
-    # Views and time
-    # ------------------------------------------------------------------
-
     async def get_welfare(self) -> dict[str, Any]:
         return await self._client.view(self.contract_id, "get_welfare")
 
@@ -353,10 +345,6 @@ class NearClient:
             await asyncio.sleep(0.05)
         raise TimeoutError(f"sandbox did not advance {blocks} blocks")
 
-    # ------------------------------------------------------------------
-    # Transaction log and events
-    # ------------------------------------------------------------------
-
     def tx_records(self) -> list[dict[str, Any]]:
         """Read the experiment transaction log (oldest first)."""
         if not self.tx_log_path.exists():
@@ -385,7 +373,7 @@ class NearClient:
                 if not log.startswith("EVENT_JSON:"):
                     continue
                 event = json.loads(log[len("EVENT_JSON:") :])
-                if event.get("standard") != EVENT_STANDARD:
+                if event.get("standard") != EVENT_STD:
                     continue
                 events.append(event)
             records.append(

@@ -51,11 +51,8 @@ class StoredOrderProposal(BaseModel):
 
     def is_expired(self) -> bool:
         """Check if the proposal has expired."""
+        # Expiry is advisory; the contract enforces expiry_time or TTL_NS.
         return False
-        # Expiry metadata is advisory; on-chain proposals use expiry_time or PROPOSAL_TTL_NS.
-        if self.proposal.expiry_time is None:
-            return False
-        return datetime.now(UTC) >= self.proposal.expiry_time
 
     def get_display_name_for_business(self) -> str:
         """Get a display name from business perspective."""

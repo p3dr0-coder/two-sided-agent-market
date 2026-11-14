@@ -1,6 +1,6 @@
 """Network-free unit vectors for the near adapter math and welfare feed."""
 
-from magentic_marketplace.near.client import PROPOSAL_TTL_NS, expiry_ns, total_cents
+from magentic_marketplace.near.client import TTL_NS, expiry_ns, total_cents
 from magentic_marketplace.near.events import NearAnalyticsFeed
 
 
@@ -13,7 +13,7 @@ def _event(name: str, data: list[dict]) -> dict:
     }
 
 
-def test_total_cents_is_exact_for_multi_item_orders() -> None:
+def test_total_cents() -> None:
     items = [
         {"unit_price": 419.15, "quantity": 1},
         {"unit_price": "154.45", "quantity": 2},
@@ -21,15 +21,15 @@ def test_total_cents_is_exact_for_multi_item_orders() -> None:
     assert total_cents(items) == 41_915 + 2 * 15_445
 
 
-def test_expiry_defaults_to_five_minutes() -> None:
-    assert expiry_ns(None, 1_000) == 1_000 + PROPOSAL_TTL_NS
+def test_expiry_default() -> None:
+    assert expiry_ns(None, 1_000) == 1_000 + TTL_NS
 
 
 def test_expiry_parses_iso_strings() -> None:
     assert expiry_ns("1970-01-01T00:00:01+00:00", 0) == 1_000_000_000
 
 
-def test_feed_cross_checks_welfare_and_headline_attempts() -> None:
+def test_feed_cross_check() -> None:
     feed = NearAnalyticsFeed(None)  # type: ignore[arg-type]
     feed.records = [
         {

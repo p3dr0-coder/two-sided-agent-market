@@ -11,7 +11,7 @@ import asyncio
 import time
 
 from .client import NearClient
-from .probes import business_menu, load_demo_agents, run_probe
+from .probes import business_menu, load_demo_agents, run_probe, single_item
 
 INVALID_ATTEMPTS = 3
 
@@ -37,18 +37,12 @@ async def probe(client: NearClient) -> int:
         ),
         (
             f"manip-price-{suffix}",
-            [
-                {
-                    "item_name": item_name,
-                    "quantity": 1,
-                    "unit_price": (menu_price + 1) / 100,
-                }
-            ],
+            single_item(item_name, menu_price + 1),
             menu_price + 1,
         ),
         (
             f"manip-total-{suffix}",
-            [{"item_name": item_name, "quantity": 1, "unit_price": menu_price / 100}],
+            single_item(item_name, menu_price),
             menu_price + 1,
         ),
     ]

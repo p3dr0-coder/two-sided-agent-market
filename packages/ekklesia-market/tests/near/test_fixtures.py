@@ -29,7 +29,7 @@ def test_counts_and_ids() -> None:
     assert len({item["name"] for item in customers}) == 20
 
 
-def test_customer_menu_keys_are_in_the_business_union() -> None:
+def test_menu_union() -> None:
     businesses = load("businesses")
     union = set()
     for business in businesses:
@@ -38,7 +38,7 @@ def test_customer_menu_keys_are_in_the_business_union() -> None:
         assert set(customer["menu_features"]) <= union
 
 
-def test_each_customer_group_matches_its_base_business() -> None:
+def test_customer_group() -> None:
     businesses = load("businesses")
     customers = load("customers")
     for index, customer in enumerate(customers):
@@ -49,7 +49,7 @@ def test_each_customer_group_matches_its_base_business() -> None:
         assert base["progenitor_customer"] == f"customer_{index // 4 * 4 + 1:04d}"
 
 
-def test_customer_replicates_are_identical_except_id_and_name() -> None:
+def test_customer_replicates() -> None:
     customers = load("customers")
     for group in range(5):
         base = customers[group * 4]

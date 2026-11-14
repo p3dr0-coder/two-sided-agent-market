@@ -11,7 +11,7 @@ import asyncio
 import time
 
 from .client import NearClient
-from .probes import business_menu, load_demo_agents, run_probe
+from .probes import business_menu, load_demo_agents, run_probe, single_item
 
 
 async def probe(client: NearClient) -> None:
@@ -20,19 +20,17 @@ async def probe(client: NearClient) -> None:
     proposal_id = f"refund-probe-{int(time.time() * 1000)}"
 
     customer, business, customer_agent, business_agent = await load_demo_agents(client)
-    item_name = next(
-        name
-        for name in business_menu(customer_agent)
-        if name in business_menu(business_agent)
-    )
-    unit_price = business_menu(business_agent)[item_name]
+    custom = business_menu(customer_agent)
+    biz = business_menu(business_agent)
+    item_name = next(name for name in custom if name in biz)
+    unit_price = biz[item_name]
     now = await client.block_timestamp_ns()
 
     await client.post_proposal(
         proposal_id,
         business,
         customer,
-        [{"item_name": item_name, "quantity": 1, "unit_price": unit_price / 100}],
+        single_item(item_name, unit_price),
         unit_price,
         now + 30_000_000_000,
     )

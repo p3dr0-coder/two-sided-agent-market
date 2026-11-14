@@ -27,7 +27,7 @@ def business(identifier: str, prices: dict[str, float], amenities: dict[str, boo
     )
 
 
-def test_rank_requires_menu_and_amenities_then_cheapest():
+def test_rank_predicate():
     customer = Customer(
         id="customer_0001",
         name="Grace Wang",
@@ -61,7 +61,7 @@ def test_rank_requires_menu_and_amenities_then_cheapest():
     assert [total for _, total in ranked] == [15_445, 17_000]
 
 
-def test_proposal_cap_is_twice_requested_total():
+def test_proposal_cap():
     customer = Customer(
         id="customer_0001",
         name="Grace Wang",

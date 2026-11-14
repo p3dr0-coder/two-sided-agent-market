@@ -39,7 +39,7 @@ def test_float_bug_value_is_exact() -> None:
     assert to_cents("154.45") == 15_445
 
 
-def test_non_integral_cents_are_rejected() -> None:
+def test_cents_reject() -> None:
     try:
         to_cents(419.155)
     except ValueError:

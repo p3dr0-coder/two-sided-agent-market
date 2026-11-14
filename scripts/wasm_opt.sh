@@ -27,7 +27,7 @@ fi
   --enable-sign-ext \
   --enable-mutable-globals \
   --enable-nontrapping-float-to-int \
-  -Oz --converge --strip-debug --strip-producers \
+  -Oz --converge \
   "$INPUT" -o "$OUTPUT"
 
 if [[ ! -s "$OUTPUT" ]]; then
