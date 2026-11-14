@@ -226,7 +226,10 @@ async fn market_soft_rejects_invalid_and_settles_valid() -> Result<()> {
         .gas(Gas::from_tgas(100))
         .transact()
         .await?;
-    assert!(second_settle.into_result().is_err(), "double settle must fail");
+    assert!(
+        second_settle.into_result().is_err(),
+        "double settle must fail"
+    );
 
     let expiry = (worker.view_block().await?.timestamp() + 2_000_000_000).to_string();
     business
@@ -272,7 +275,10 @@ async fn market_soft_rejects_invalid_and_settles_valid() -> Result<()> {
         .gas(Gas::from_tgas(100))
         .transact()
         .await?;
-    assert!(second_refund.into_result().is_err(), "double refund must fail");
+    assert!(
+        second_refund.into_result().is_err(),
+        "double refund must fail"
+    );
     let welfare_after: Value = contract.view("get_welfare").await?.json()?;
     assert_eq!(welfare_after["settled_count"], 1);
     assert_eq!(welfare_after["total_customer_utility_cents"], "18353");

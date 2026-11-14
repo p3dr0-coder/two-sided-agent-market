@@ -7,11 +7,11 @@ use crate::events::{
     ProposalRejectedData, TradeSettledData,
 };
 use crate::types::{
-    ACCOUNT_CREATION_YOCTO, AGENT_REGISTRATION_BYTES, MAX_AMENITIES, MAX_ITEMS_PER_PROPOSAL,
-    MAX_MENU, MAX_PROPOSALS_PER_CUSTOMER, OrderItem, Proposal, ProposalStatus, Role,
-    TradeReceipt, AgentProfile, cents_delta_ok, escrow_yocto, order_total,
+    ACCOUNT_CREATION_YOCTO, AGENT_REGISTRATION_BYTES, AgentProfile, MAX_AMENITIES,
+    MAX_ITEMS_PER_PROPOSAL, MAX_MENU, MAX_PROPOSALS_PER_CUSTOMER, OrderItem, Proposal,
+    ProposalStatus, Role, TradeReceipt, cents_delta_ok, escrow_yocto, order_total,
 };
-use near_sdk::json_types::{I128, U128, U64};
+use near_sdk::json_types::{I128, U64, U128};
 use near_sdk::{AccountId, Allowance, NearToken, Promise, PublicKey, env, near, require};
 
 const BUSINESS_METHODS: &str = "post_proposal,settle";
@@ -22,10 +22,9 @@ fn valid_agent_name(agent_name: &str) -> bool {
     if bytes.is_empty() || bytes.len() > 40 {
         return false;
     }
-    if !bytes
-        .iter()
-        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-' || *byte == b'_')
-    {
+    if !bytes.iter().all(|byte| {
+        byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-' || *byte == b'_'
+    }) {
         return false;
     }
     let first = bytes[0];
@@ -137,9 +136,14 @@ impl Contract {
         expiry: U64,
     ) {
         let business = env::predecessor_account_id();
-        if let Err(reason) =
-            self.validate_proposal(&business, &customer, &proposal_id, &items, total_price, expiry.0)
-        {
+        if let Err(reason) = self.validate_proposal(
+            &business,
+            &customer,
+            &proposal_id,
+            &items,
+            total_price,
+            expiry.0,
+        ) {
             self.welfare.rejected_proposals = self.welfare.rejected_proposals.saturating_add(1);
             MarketEvent::ProposalRejected(vec![ProposalRejectedData {
                 proposal_id,
@@ -259,18 +263,14 @@ impl Contract {
         self.proposals.insert(proposal_id.clone(), proposal.clone());
 
         let first = if needs_met {
-            self.customers_needs_met
-                .insert(proposal.customer.clone())
+            self.customers_needs_met.insert(proposal.customer.clone())
         } else {
             false
         };
         if first {
             self.welfare.needs_met_count = self.welfare.needs_met_count.saturating_add(1);
         }
-        let match_score = customer_profile
-            .requested_total_cents
-            .0
-            .saturating_mul(2);
+        let match_score = customer_profile.requested_total_cents.0.saturating_mul(2);
         let match_score_signed = i128::try_from(match_score).unwrap_or(i128::MAX);
         let price_signed = i128::try_from(price).unwrap_or(i128::MAX);
         let delta = if first {
@@ -300,8 +300,7 @@ impl Contract {
             .unwrap_or(U128(0))
             .0;
         if paid_before == 0 {
-            self.welfare.purchasing_customers =
-                self.welfare.purchasing_customers.saturating_add(1);
+            self.welfare.purchasing_customers = self.welfare.purchasing_customers.saturating_add(1);
         }
         self.paid_cents_by_customer.insert(
             proposal.customer.clone(),
@@ -333,10 +332,10 @@ impl Contract {
         .emit();
         MarketEvent::WelfareSnapshot(vec![self.summary()]).emit();
 
-        let revenue_yocto = escrow_yocto(revenue)
-            .unwrap_or_else(|| env::panic_str("settlement revenue overflow"));
-        let fee_yocto = escrow_yocto(fee)
-            .unwrap_or_else(|| env::panic_str("settlement fee overflow"));
+        let revenue_yocto =
+            escrow_yocto(revenue).unwrap_or_else(|| env::panic_str("settlement revenue overflow"));
+        let fee_yocto =
+            escrow_yocto(fee).unwrap_or_else(|| env::panic_str("settlement fee overflow"));
         let mut promise = Promise::new(business_profile.payout_account.clone())
             .transfer(NearToken::from_yoctonear(revenue_yocto));
         if fee > 0 {
@@ -412,7 +411,10 @@ impl Contract {
                 return Err(format!("item not on menu: {}", item.item_name));
             };
             if !cents_delta_ok(item.unit_price.0, menu_price.0) {
-                return Err(format!("unit price is not the menu price: {}", item.item_name));
+                return Err(format!(
+                    "unit price is not the menu price: {}",
+                    item.item_name
+                ));
             }
         }
 
@@ -475,6 +477,9 @@ mod tests {
 
         let offered = vec!["warranty".to_string(), "licensed".to_string()];
         assert!(amenities_cover(&["warranty".to_string()], &offered));
-        assert!(!amenities_cover(&["after hours service".to_string()], &offered));
+        assert!(!amenities_cover(
+            &["after hours service".to_string()],
+            &offered
+        ));
     }
 }

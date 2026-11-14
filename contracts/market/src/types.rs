@@ -1,6 +1,6 @@
 //! Shared state types, price constants, and the storage-key prefix enum.
 
-use near_sdk::json_types::{I128, U128, U64};
+use near_sdk::json_types::{I128, U64, U128};
 use near_sdk::{AccountId, IntoStorageKey, near};
 
 /// Who owns an agent sub-account.
@@ -114,6 +114,7 @@ const _: () = assert!(YOCTO_PER_USD_CENT == 10_000_000_000_000_000_000);
 /// Integer cents only: the origin rejects `abs(delta) >= 0.01` dollars, so any
 /// nonzero cent delta is invalid here.
 pub const MAX_PRICE_DELTA_CENTS: u128 = 0;
+const _: () = assert!(MAX_PRICE_DELTA_CENTS == 0);
 pub const MAX_MENU: usize = 50;
 pub const MAX_AMENITIES: usize = 20;
 pub const MAX_ITEMS_PER_PROPOSAL: usize = 10;
@@ -153,9 +154,8 @@ impl IntoStorageKey for StorageKey {
 
 /// Exact-cent comparison used by both proposal price checks.
 pub(crate) fn cents_delta_ok(offered: u128, agreed: u128) -> bool {
-    offered.abs_diff(agreed) <= MAX_PRICE_DELTA_CENTS
+    offered.abs_diff(agreed) == MAX_PRICE_DELTA_CENTS
 }
-
 
 /// Sum of `quantity * unit_price` with checked arithmetic.
 pub(crate) fn order_total(items: &[OrderItem]) -> Option<u128> {

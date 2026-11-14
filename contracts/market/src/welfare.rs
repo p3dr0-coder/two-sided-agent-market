@@ -28,20 +28,16 @@ impl Contract {
 impl Contract {
     pub(crate) fn summary(&self) -> WelfareSummary {
         let counters = &self.welfare;
-        let purchase_completion_bps = if counters.registered_customers == 0 {
-            0
-        } else {
-            counters
-                .purchasing_customers
-                .saturating_mul(10_000)
-                / counters.registered_customers
-        };
+        let purchase_completion_bps = counters
+            .purchasing_customers
+            .saturating_mul(10_000)
+            .checked_div(counters.registered_customers)
+            .unwrap_or(0);
         let avg_utility_per_purchaser_cents = if counters.purchasing_customers == 0 {
             I128(0)
         } else {
             I128(
-                counters.total_customer_utility_cents.0
-                    / i128::from(counters.purchasing_customers),
+                counters.total_customer_utility_cents.0 / i128::from(counters.purchasing_customers),
             )
         };
         WelfareSummary {
