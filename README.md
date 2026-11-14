@@ -3,7 +3,6 @@
 A Rust contract maps `OrderProposal` and `Payment` messages to native-NEAR escrow across per-agent sub-accounts. It emits origin welfare as NEP-297 `EVENT_JSON` logs. Businesses use a FunctionCall key (`post_proposal,settle`). Customers attach escrow with a FullAccess key. Read `get_welfare()` or sum `TradeSettled` events. Port of [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), see [ATTRIBUTION.md](ATTRIBUTION.md).
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontSize":"14px"}}}%%
 sequenceDiagram
     accTitle: ekklesia runtime flow
     accDescr: Operator deploys the market, registers agents, runs scripted orders, then settles and reads welfare.
