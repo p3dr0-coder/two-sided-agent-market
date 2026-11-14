@@ -147,3 +147,10 @@ Keep testnet keys in your shell or gitignored `.env`. `data/demo_small` (5×20) 
 - **Limits:** sandbox and demo only, no real fund, no mainnet deploy; exact cents checked, not truthful YAML. Orchestrator funds `register_agent`, `owner` and `fee_bps` set at `new`, `payout_account` needs FullAccess, `refund` permissionless, upgrades `#[init(ignore_state)]`.
 - **Measured results:** `bash scripts/demo.sh` and `pytest -q` pass, `cargo test --workspace` covers Rust unit vectors and the `near-workspaces` sandbox test; counts and check outputs in [SUBMISSION-PREP.md](SUBMISSION-PREP.md). Raw wasm `234,809 B`, `cargo near build non-reproducible-wasm` `193,807 B`, `scripts/wasm_opt.sh` (`-Oz --converge`) `193,278 B`; cdylib-only `173,555 B` raw, measured, not adopted. `lexical_rank` n=150: `1.85×` faster. `_client_for` 500 lookups: `5.9×` faster.
 - **Attribution:** [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), [arXiv 2510.25779](https://arxiv.org/abs/2510.25779), [ATTRIBUTION.md](ATTRIBUTION.md), unchanged `LICENSE`. Tracks `swarms` and `agents` end 2026-11-14T23:59:00Z (UTC).
+
+## Baseline and disclosure
+
+Baseline: tag `pre-hackathon` marks the imported tree at `126ffe4` (microsoft/multi-agent-marketplace).
+Submission: tag `hackathon-submission` marks the submitted state; `git rev-parse --short hackathon-submission` prints it.
+Diff: `git diff pre-hackathon..hackathon-submission`. After publishing, `https://github.com/<owner>/<repo>/compare/pre-hackathon...hackathon-submission`.
+Libraries, templates and AI-generated code are listed in `ATTRIBUTION.md`.
