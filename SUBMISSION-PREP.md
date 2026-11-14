@@ -43,7 +43,7 @@ Never add `website`. Print the full JSON and wait for an explicit yes. A 201 is 
 
 - Q-003: 8 pre-existing tags, none of the required pair, and no README diff link. **Not satisfied**, local tags stay uncreated.
 - Q-012 covers judges who cannot open the demo. Q-014 finds `LICENSE` present. Q-017 finds the "Quickstart (sandbox tokens only)" line and the "Do X -> see Y" table.
-- Q-015 needs a second project on the same email named in README. Unresolved. Q-002/Q-005 disclosure is the README attribution line (`ATTRIBUTION.md`, port of microsoft/multi-agent-marketplace MIT).
+- Q-015 needs a second project on the same email named in README. Resolved: README (Baseline and disclosure) names philia. Q-002/Q-005 disclosure is the README attribution line (`ATTRIBUTION.md`, port of microsoft/multi-agent-marketplace MIT).
 - W8 CORRECTED BOUNDED: core nearcore is UPHELD for that state only. The dRPC gateway answers at N<=3 and returns HTTP 400 code 31 at N>=4.
 
 Blockers, which do not block submission. Celesto blocked clippy, fmt, `cargo-near-check`, and full pytest with the rnr extra plus Postgres. The reason is `Trial credit is too low to start this sandbox`. Firecrawl daily credits were blocked, and Exa MCP returned 402, so direct REST was used. BoxLite §6 is MEASURED `By93HSGvFqAo`. The orphan near-sandbox PID 136079 is KILLED and `/tmp/ekk-sb-w3` is removed.

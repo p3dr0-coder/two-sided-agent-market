@@ -2,6 +2,8 @@
 
 A Rust contract maps `OrderProposal` and `Payment` messages to native-NEAR escrow across per-agent sub-accounts. It emits origin welfare as NEP-297 `EVENT_JSON` logs. Businesses use a FunctionCall key (`post_proposal,settle`). Customers attach escrow with a FullAccess key. Read `get_welfare()` or sum `TradeSettled` events. Port of [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), see [ATTRIBUTION.md](ATTRIBUTION.md).
 
+Tracks: `swarms`, `agents` (end 2026-11-14T23:59:00Z) · License: MIT ([LICENSE](./LICENSE)) · Baseline: tag `pre-hackathon` at `126ffe4` (microsoft/multi-agent-marketplace); diff `git diff pre-hackathon..hackathon-submission`.
+
 ```mermaid
 sequenceDiagram
     accTitle: ekklesia runtime flow
@@ -90,7 +92,7 @@ Install Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https:/
 | `near-ekklesia analyze data/demo.db --db-type sqlite --near` | origin analytics, on-chain headline, welfare assertion |
 | `bash scripts/measure.sh` | `numbers` run, 3 invalid proposals, 1 headline |
 | `python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy` | testnet registration via `NEAR_ACCOUNT_ID`/`NEAR_PRIVATE_KEY` |
-| `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, ranking tests (offline) |
+| `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, ranking tests (offline; 26 passed in 9 s, measured 2026-11-12) |
 
 `run` writes `data/<experiment_name>.db` by default, `--db-path` overrides, `--override-db` resets the schema. SQLite is default. Postgres: `docker compose up -d postgres`, `--db-type postgres`.
 
@@ -148,9 +150,21 @@ Keep testnet keys in your shell or gitignored `.env`.
 - **Measured results:** counts and check outputs in [SUBMISSION-PREP.md](SUBMISSION-PREP.md). Raw wasm `234,809 B`, `cargo near build non-reproducible-wasm` `193,807 B`, `scripts/wasm_opt.sh` (`-Oz --converge`) `193,278 B`; cdylib-only `173,555 B` raw, measured, not adopted. `lexical_rank` n=150: `1.85×` faster. `_client_for` 500 lookups: `5.9×` faster.
 - **Attribution:** [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), [arXiv 2510.25779](https://arxiv.org/abs/2510.25779), [ATTRIBUTION.md](ATTRIBUTION.md), unchanged `LICENSE`. Tracks `swarms` and `agents` end 2026-11-14T23:59:00Z (UTC).
 
+## Claim → evidence
+| Claim | Evidence |
+|---|---|
+| Settlement moves escrow to `payout_account` and emits `trade_settled` | `contracts/market/src/settlement.rs:226` (`pub fn settle`); `contracts/market/src/events.rs` (`trade_settled`) |
+| Every demo YAML price converts to exact integer cents | `packages/ekklesia-market/tests/near/test_cents.py:21` (`test_demo_yaml_count`), `:36` (`test_float_exact`) |
+| Seeded fixture is 5 businesses x 20 customers | `packages/ekklesia-market/tests/near/test_fixtures.py:19` (`test_counts_and_ids`) |
+| Sandbox flow: invalid proposals soft-reject, valid ones settle | `tests/sandbox_market.rs:13` (`market_soft_rejects_invalid_and_settles_valid`) |
+| Exact-cent conversion is `Decimal`-based, no float drift | `packages/ekklesia-market/src/magentic_marketplace/near/client.py:32` (`to_cents`) |
+| Market run + welfare headline | "Do X -> see Y" table and the measured block above (`scripts/demo.sh`, `scripts/measure.sh`) |
+| Near/offline suite green | `pytest packages/ekklesia-market/tests/near` → 26 passed in 9 s (measured 2026-11-12) |
+
 ## Baseline and disclosure
 
 Baseline: tag `pre-hackathon` marks the imported tree at `126ffe4` (microsoft/multi-agent-marketplace).
 Submission: tag `hackathon-submission` marks the submitted state. `git rev-parse --short hackathon-submission` prints it.
 Diff: `git diff pre-hackathon..hackathon-submission`. After publishing, `https://github.com/<owner>/<repo>/compare/pre-hackathon...hackathon-submission`.
 Libraries, templates and AI-generated code are listed in `ATTRIBUTION.md`.
+Q-015: the second project on the same submission email is **philia** (social on NEAR, tracks `social`, `open`).
