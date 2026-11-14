@@ -233,3 +233,27 @@ __marimo__/
 *.wasm
 data/*-tx.jsonl
 analytics_results_*.json
+
+# markdown and doc temporaries
+*.md.bak
+*.md.tmp
+*.md.orig
+.~*
+.tmp*/
+*.tmp
+*.tok
+
+# test and runtime output
+coverage/
+bench.json
+*.out
+*.err
+evidence/*.log
+
+# tool and build caches
+.cache/
+.turbo/
+.parcel-cache/
+*.tsbuildinfo
+node_modules/
+.next/

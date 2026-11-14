@@ -72,7 +72,7 @@ sequenceDiagram
 
 Install Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https://docs.astral.sh/uv/), Binaryen `wasm-opt` >=116 (`scripts/wasm_opt.sh`). Run `uv sync --all-extras`, `source .venv/bin/activate`, `bash scripts/demo.sh`.
 
-`scripts/demo.sh` runs seven steps. It starts `nearprotocol/sandbox:2.13.4` on `127.0.0.1:3030`, builds `contracts/market` (`wasm32-unknown-unknown`), deploys `ekklesia.sandbox`, calls `new({"fee_bps": 0})`. It registers `b1..b5.ekklesia.sandbox` and `c1..c20.ekklesia.sandbox`, keys in `.sandbox/agents.json` (`0600`). Escrow plus gas per customer. A deterministic no-LLM market writes `data/demo.db`. It prints analytics, headline. Last, it posts, escrows, expires, and refunds one proposal. Without Docker, run `near-sandbox --home DIR init` and `near-sandbox --home DIR run`. Export `NEAR_SANDBOX_URL`, `NEAR_ROOT_ACCOUNT`, `NEAR_ROOT_PRIVATE_KEY`, `MARKET_CONTRACT_ID` (e.g. `ekklesia.test.near`). `setup_local.sh` skips Docker for a native node. Peg: `1 NEAR = $1000` (`CENTS_PER_NEAR = 100_000`), so `1` cent is `1e19` yoctoNEAR. No LLM key or real fund is used.
+`scripts/demo.sh` runs seven steps. It starts `nearprotocol/sandbox:2.13.4` on `127.0.0.1:3030`, builds `contracts/market` (`wasm32-unknown-unknown`), deploys `ekklesia.sandbox`, and calls `new({"fee_bps": 0})`. It registers `b1..b5.ekklesia.sandbox` and `c1..c20.ekklesia.sandbox`, keys in `.sandbox/agents.json` (`0600`). A deterministic no-LLM market writes `data/demo.db`, then it prints analytics and headline, and posts, escrows, expires, and refunds one proposal. Without Docker, run `near-sandbox --home DIR init` and `near-sandbox --home DIR run`. Export `NEAR_SANDBOX_URL`, `NEAR_ROOT_ACCOUNT`, `NEAR_ROOT_PRIVATE_KEY`, `MARKET_CONTRACT_ID` (e.g. `ekklesia.test.near`). `setup_local.sh` skips Docker for a native node. Peg: `1 NEAR = $1000` (`CENTS_PER_NEAR = 100_000`), so `1` cent is `1e19` yoctoNEAR. No LLM key or real fund is used.
 
 ## Do X -> see Y
 
@@ -84,15 +84,13 @@ Install Docker, Rust 1.100.0 (`rust-toolchain.toml`), Python 3.11+, [uv](https:/
 | `bash scripts/measure.sh` | `numbers` run, 3 invalid proposals, 1 headline |
 | `python -m magentic_marketplace.near.bootstrap --network testnet --no-deploy` | testnet registration via `NEAR_ACCOUNT_ID`/`NEAR_PRIVATE_KEY` |
 | `pytest packages/ekklesia-market/tests/near` | exact-cent, fixture, routing, ranking tests (offline) |
-| `cargo test --workspace` | Rust unit vectors, `near-workspaces` sandbox test |
 
 `run` writes `data/<experiment_name>.db` by default, `--db-path` overrides, `--override-db` resets the schema. SQLite is default. Postgres: `docker compose up -d postgres`, `--db-type postgres`.
 
-Measured 2026-11-12 by `scripts/measure.sh` on `nearprotocol/sandbox`-equivalent native nearcore 2.14, 5×20, `fee_bps = 0`:
+Measured 2026-11-12 by `scripts/measure.sh` on `nearprotocol/sandbox`-equivalent native nearcore 2.14, 5×20, `fee_bps = 0`. Symbol form: `W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`, `G = 3.617 TGas`, medians `K = 23`, `J = 3`. Independent runs: `demo.sh` 20/0, `measure.sh` 23/3. Scale 20×5 differs from paper §4.1 (33/99, 100/300), so W and N are not paper-comparable.
 ```
 Total marketplace customer utility = 1542308; purchase completion rate = 100% (R = 10000/100); needs-met = 20/20; invalid proposals accepted = 0 of 23; soft-rejected = 3; gas/settle = 3.617 TGas
 ```
-`W = 1,542,308` USD cents (`$15,423.08`), `R = 100%`, `N = 20/20`. Medians: `K = 23`, `J = 3`, `G = 3.617 TGas`. Independent runs: `demo.sh` 20/0, `measure.sh` 23/3 (`remote-w4/w4-demo.log`, `remote-w4/w4-numbers.log`). Scale 20×5 differs from paper §4.1 (33/99, 100/300), so W and N are not paper-comparable.
 
 ## Architecture and contract methods
 
@@ -139,8 +137,6 @@ Keep testnet keys in your shell or gitignored `.env`. `data/demo_small` (5×20) 
 
 ## Limits and verification
 
-- **Sandbox and demo only:** no real fund, no mainnet deploy. Exact cents checked, not truthful YAML.
-- **Trust and expiry:** orchestrator funds `register_agent`. `owner` and `fee_bps` set at `new`. `payout_account` needs FullAccess. `refund` permissionless. Upgrades: `#[init(ignore_state)]`.
-- **Verification:** `cargo test --workspace`: `8` unit and 1 sandbox test. `pytest -q`: `242 passed, 117 skipped`. `bash scripts/demo.sh` passes (`WORKLOG.md`).
-- **Build size and probes:** raw wasm `234,809 B`, `cargo near build non-reproducible-wasm` `193,807 B`, `scripts/wasm_opt.sh` (`-Oz --converge`) `193,278 B`. `lexical_rank` n=150: `1.85×` faster. `_client_for` 500 lookups: `5.9×` faster. cdylib-only: `173,555 B` raw, measured, not adopted.
+- **Limits:** sandbox and demo only, no real fund, no mainnet deploy; exact cents checked, not truthful YAML. Orchestrator funds `register_agent`, `owner` and `fee_bps` set at `new`, `payout_account` needs FullAccess, `refund` permissionless, upgrades `#[init(ignore_state)]`.
+- **Measured results:** `bash scripts/demo.sh` and `pytest -q` pass, `cargo test --workspace` covers Rust unit vectors and the `near-workspaces` sandbox test; counts and check outputs in [SUBMISSION-PREP.md](SUBMISSION-PREP.md). Raw wasm `234,809 B`, `cargo near build non-reproducible-wasm` `193,807 B`, `scripts/wasm_opt.sh` (`-Oz --converge`) `193,278 B`; cdylib-only `173,555 B` raw, measured, not adopted. `lexical_rank` n=150: `1.85×` faster. `_client_for` 500 lookups: `5.9×` faster.
 - **Attribution:** [microsoft/multi-agent-marketplace](https://github.com/microsoft/multi-agent-marketplace) (MIT), [arXiv 2510.25779](https://arxiv.org/abs/2510.25779), [ATTRIBUTION.md](ATTRIBUTION.md), unchanged `LICENSE`. Tracks `swarms` and `agents` end 2026-11-14T23:59:00Z (UTC).
