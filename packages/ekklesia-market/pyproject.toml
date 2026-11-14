@@ -69,6 +69,9 @@ select = [
 ]
 ignore = ["E501", "UP046", "UP047"]  # line too long, generic subclassing, union syntax
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint.isort]
 known-first-party = ["magentic_marketplace"]
 

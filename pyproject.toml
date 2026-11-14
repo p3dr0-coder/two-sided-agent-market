@@ -43,6 +43,9 @@ select = [
 ]
 ignore = ["E501", "UP046"] # line too long, generics
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.poe.tasks]
 # Formatting tasks
 format = "ruff format --check --diff"

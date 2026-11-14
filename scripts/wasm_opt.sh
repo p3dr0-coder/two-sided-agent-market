@@ -14,7 +14,7 @@ OUTPUT="${2:-${INPUT%.wasm}.opt.wasm}"
 WASM_OPT="${WASM_OPT:-wasm-opt}"
 
 if ! command -v "$WASM_OPT" >/dev/null 2>&1; then
-  echo "wasm-opt not found; install Binaryen (>=133) or set WASM_OPT" >&2
+  echo "wasm-opt not found; install Binaryen (>=116) or set WASM_OPT" >&2
   exit 1
 fi
 if [[ ! -f "$INPUT" ]]; then
