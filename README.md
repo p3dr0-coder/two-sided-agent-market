@@ -7,12 +7,18 @@ sequenceDiagram
     accTitle: ekklesia runtime flow
     accDescr: Operator deploys the market, registers agents, runs scripted orders, then settles and reads welfare.
     autonumber
+    box rgba(230,247,235,0.12) Orchestrator
     participant U as Operator
     participant P as Python marketplace
+    end
+    box rgba(243,232,255,0.12) NEAR sandbox
     participant R as NEAR RPC
     participant B as Sandbox node
+    end
+    box rgba(226,238,255,0.12) Market code
     participant M as Market contract
     participant S as Search module
+    end
     rect rgba(226,238,255,0.20)
     Note over U,M: PHASE 1 — Deploy market
     U->>R: cargo near deploy, 193,807 B wasm
@@ -20,20 +26,20 @@ sequenceDiagram
     end
     rect rgba(230,247,235,0.20)
     Note over P,B: PHASE 2 — Register agents and keys
-    P->>M: register_agent(agent_name, profile, public_key), 0.007 NEAR
+    P->>+M: register_agent(agent_name, profile, public_key), 0.007 NEAR
     M->>B: sub-account agent_name.contract, scoped key post_proposal,settle
-    M-->>P: scoped key installed, customer key FullAccess
+    M-->>-P: scoped key installed, customer key FullAccess
     end
     rect rgba(255,244,214,0.20)
     Note over P,M: PHASE 3 — Post and fund orders
-    P->>M: post_proposal(proposal_id, items, total_price, expiry)
+    P->>+M: post_proposal(proposal_id, items, total_price, expiry)
     alt exact cents, known agent, unexpired
-    M-->>P: Posted, proposal_posted event
+    M-->>-P: Posted, proposal_posted event
     else bad input
     M-->>P: soft reject, counter and proposal_rejected event
     end
-    P->>M: accept_proposal(proposal_id), total_price * 1e19 yoctoNEAR
-    M-->>P: Funded, proposal_accepted event
+    P->>+M: accept_proposal(proposal_id), total_price * 1e19 yoctoNEAR
+    M-->>-P: Funded, proposal_accepted event
     end
     rect rgba(243,232,255,0.20)
     Note over P: PHASE 4 — Poll events
@@ -43,29 +49,29 @@ sequenceDiagram
     end
     rect rgba(255,232,232,0.20)
     Note over P,S: PHASE 5 — Search and filter
-    P->>S: execute_search, SearchAlgorithm.FILTERED or LEXICAL
+    P->>+S: execute_search, SearchAlgorithm.FILTERED or LEXICAL
     S->>S: _add_constraint_query on rating, amenities, menu items
     end
     rect rgba(224,247,250,0.20)
     Note over P,S: PHASE 6 — Rank and match
     S->>S: lexical_rank, or is_subset plus rating sort
-    S-->>P: ranked businesses via paginate_search_response
+    S-->>-P: ranked businesses via paginate_search_response
     end
     rect rgba(255,248,225,0.20)
     Note over P,M: PHASE 7 — Settle and read welfare
-    P->>M: settle(proposal_id) as the business
-    M-->>P: Settled, price minus fee to payout_account
+    P->>+M: settle(proposal_id) as the business
+    M-->>-P: Settled, price minus fee to payout_account
     opt funded but expired
-    P->>M: refund(proposal_id) from any caller
-    M-->>P: Refunded, escrow returns to the customer
+    P->>+M: refund(proposal_id) from any caller
+    M-->>-P: Refunded, escrow returns to the customer
     end
     par fetch_events, Semaphore(4) in flight
     P->>R: transaction_status for each logged tx
     and
     P->>R: transaction_status for each logged tx
     end
-    P->>M: get_welfare(), then assert_welfare against TradeSettled
-    M-->>P: counters plus gas per settle
+    P->>+M: get_welfare(), then assert_welfare against TradeSettled
+    M-->>-P: counters plus gas per settle
     end
 ```
 
